@@ -1,0 +1,122 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      universal:
+        description: "Build a universal (Apple Silicon + Intel) app"
+        type: boolean
+        default: true
+      release:
+        description: "Publish the DMG as a GitHub release"
+        type: boolean
+        default: false
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      DOWNLY_TOOLS_DIR: ${{ github.workspace }}/.tools-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          XCODE=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi -E "beta|rc" | sort -V | tail -1)
+          if [ -n "$XCODE" ]; then sudo xcode-select -s "$XCODE"; fi
+          xcodebuild -version
+          swift --version
+          sw_vers
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.swift') }}-${{ github.sha }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.swift') }}-
+
+      - name: Restore engine cache
+        uses: actions/cache@v4
+        with:
+          path: .tools-cache
+          key: tools-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: |
+            tools-${{ runner.arch }}-
+
+      - name: Unit tests
+        if: contains(github.event.head_commit.message, '[tests]')
+        run: swift test 2>&1 | tail -80; exit ${PIPESTATUS[0]}
+
+      - name: Build app
+        env:
+          ARCHS: ${{ (github.event_name == 'workflow_dispatch' && inputs.universal) && 'arm64 x86_64' || '' }}
+        run: |
+          if [ -z "$ARCHS" ]; then unset ARCHS; fi
+          ./scripts/build-app.sh
+
+      - name: Build self-test
+        run: swift build -c release --product downly-selftest
+
+      - name: Self-test
+        timeout-minutes: 15
+        run: |
+          BIN="$(swift build -c release --show-bin-path)"
+          "$BIN/downly-selftest" --downloads 2>&1 | tee selftest.log
+
+      - name: UI snapshots
+        if: always()
+        timeout-minutes: 5
+        run: |
+          mkdir -p snapshots
+          ./dist/Downly.app/Contents/MacOS/Downly --snapshot "$PWD/snapshots" &
+          PID=$!
+          for i in $(seq 1 90); do
+            if ! kill -0 $PID 2>/dev/null; then break; fi
+            sleep 1
+          done
+          kill $PID 2>/dev/null || true
+          ls -la snapshots
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Downly-dmg
+          path: dist/Downly.dmg
+          if-no-files-found: warn
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics
+          path: |
+            snapshots/
+            selftest.log
+          if-no-files-found: ignore
+
+      - name: Publish release
+        if: github.event_name == 'workflow_dispatch' && inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" dist/Downly.app/Contents/Info.plist)
+          TAG="v$VERSION"
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" dist/Downly.dmg --title "Downly $VERSION" --notes-file docs/RELEASE_NOTES.md --target "$GITHUB_SHA"
