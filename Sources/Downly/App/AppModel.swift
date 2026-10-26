@@ -257,6 +257,22 @@ final class AppModel {
         }
     }
 
+    func handleOpenURL(_ url: URL) {
+        guard url.scheme?.lowercased() == "downly" else { return }
+        var target: String?
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let value = components.queryItems?.first(where: { $0.name == "url" })?.value {
+            target = value
+        } else {
+            let raw = String(url.absoluteString.dropFirst("downly://".count))
+            target = raw.removingPercentEncoding ?? raw
+        }
+        guard let target, !target.isEmpty else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        input = target
+        submit(target)
+    }
+
     func pasteFromClipboard() {
         guard let text = NSPasteboard.general.string(forType: .string) else { return }
         input = text

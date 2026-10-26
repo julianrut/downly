@@ -3,7 +3,9 @@ import Foundation
 public struct TikTokClient: Sendable {
     let http: HTTPClient
 
-    public init(http: HTTPClient = HTTPClient(userAgent: UserAgent.chrome)) {
+    public static let sharedHTTP = HTTPClient(userAgent: UserAgent.chrome)
+
+    public init(http: HTTPClient = TikTokClient.sharedHTTP) {
         self.http = http
     }
 
@@ -72,7 +74,8 @@ public struct TikTokClient: Sendable {
 }
 
 public struct QuickPreview: Sendable {
-    let http = HTTPClient(userAgent: UserAgent.safari, timeout: 8, storesCookies: false)
+    public static let sharedHTTP = HTTPClient(userAgent: UserAgent.safari, timeout: 8, storesCookies: false)
+    let http = QuickPreview.sharedHTTP
 
     public init() {}
 

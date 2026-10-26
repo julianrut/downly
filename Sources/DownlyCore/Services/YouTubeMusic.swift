@@ -19,7 +19,9 @@ public struct YouTubeMusicSearch: Sendable {
     static let songsParams = "EgWKAQIIAWoKEAoQAxAEEAkQBQ=="
     static let videosParams = "EgWKAQIQAWoKEAoQAxAEEAkQBQ=="
 
-    public init(http: HTTPClient = HTTPClient(userAgent: UserAgent.chrome)) {
+    public static let sharedHTTP = HTTPClient(userAgent: UserAgent.chrome, timeout: 20, storesCookies: false)
+
+    public init(http: HTTPClient = YouTubeMusicSearch.sharedHTTP) {
         self.http = http
     }
 

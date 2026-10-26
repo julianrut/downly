@@ -55,6 +55,14 @@ Other details:
 
 Requires **macOS 14 Sonoma or later**. Runs natively on Apple Silicon and Intel.
 
+## One-click download from your browser
+
+Downly registers `downly://` links. Add this bookmarklet to your browser's favorites bar, then click it on any YouTube, Spotify, Instagram or TikTok page to open that page in Downly:
+
+```js
+javascript:location.href='downly://open?url='+encodeURIComponent(location.href)
+```
+
 ## Signing in for stories and private posts
 
 Instagram only shows stories, highlights and private posts to people who are signed in. Downly doesn't ask for your password. Instead it uses your existing sign-in from a browser on this Mac:

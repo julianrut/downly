@@ -18,6 +18,9 @@ struct DownlyApp: App {
                         model.start()
                     }
                 }
+                .onOpenURL { url in
+                    model.handleOpenURL(url)
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)

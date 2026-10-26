@@ -3,7 +3,9 @@ import Foundation
 public struct SpotifyClient: Sendable {
     let http: HTTPClient
 
-    public init(http: HTTPClient = HTTPClient(userAgent: UserAgent.safari)) {
+    public static let sharedHTTP = HTTPClient(userAgent: UserAgent.safari)
+
+    public init(http: HTTPClient = SpotifyClient.sharedHTTP) {
         self.http = http
     }
 

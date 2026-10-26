@@ -7,6 +7,8 @@ Paste a link and download it on your Mac.
 - **Instagram**: posts, carousels, reels, stories, highlights and profile pictures.
 - **TikTok**: videos without the watermark, photo posts and sounds.
 - Works with 1,000+ other sites through yt-dlp.
+- Copy a link and Downly offers it when you switch back. You can also drag a link onto the window, or use the `downly://` bookmarklet from your browser.
+- The download engine updates itself, so downloads keep working when sites change.
 
 ### Installing
 
