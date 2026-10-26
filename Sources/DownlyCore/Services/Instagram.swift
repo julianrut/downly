@@ -290,6 +290,7 @@ public struct InstagramClient: Sendable {
 
     public func fetchProfile(username: String) async throws -> Profile {
         var profile: Profile?
+        var apiError: Error?
         do {
             let json = try await api("users/web_profile_info/?username=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username)")
             let user = json["data"]["user"]
@@ -306,13 +307,21 @@ public struct InstagramClient: Sendable {
             }
         } catch {
             if error.isCancellation { throw error }
-            if let known = error as? DownlyError, case .unavailable = known { throw known }
+            apiError = error
         }
         if profile == nil {
-            profile = try await profileFromPage(username: username)
+            do {
+                profile = try await profileFromPage(username: username)
+            } catch {
+                if error.isCancellation { throw error }
+                apiError = apiError ?? error
+            }
         }
         guard var resolved = profile else {
-            throw DownlyError.unavailable("Couldn’t find @\(username) on Instagram.")
+            if let known = apiError as? DownlyError, known.needsAccount {
+                throw known
+            }
+            throw DownlyError.needsLogin(.instagram, "Instagram didn’t share @\(username)’s profile without signing in.")
         }
         if isLoggedIn, let json = try? await api("users/\(resolved.id)/info/") {
             let user = json["user"]

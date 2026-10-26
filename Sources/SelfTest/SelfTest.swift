@@ -133,28 +133,79 @@ struct SelfTest {
             let destination = FileManager.default.temporaryDirectory.appendingPathComponent("downly-selftest-\(UUID().uuidString)")
             let context = DownloadContext(tools: tools, settings: EngineSettings(), destination: destination, embedMetadata: true, filenameStyle: .title)
             let engine = DownloadEngine(context: context)
+            let mediaTools = MediaTools(tools: tools)
+            let tiktok = LinkParser.parse("https://www.tiktok.com/@scout2015/video/6718335390845095173")!
+
+            await soft("Download TikTok video with sound") {
+                guard case .video(let video) = try await analyzer.analyze(tiktok) else { throw DownlyError.message("not a video") }
+                let choices = FormatPlanner.videoChoices(formats: video.formats, duration: video.summary.duration, preferences: VideoPreferences(), preferMuxed: true)
+                guard let choice = choices.first else { throw DownlyError.message("no choices") }
+                let job = DownloadJob(title: video.summary.title, subtitle: "", detail: choice.label, thumbnail: nil, platform: .tiktok, kind: .video(url: video.sourceURL, selector: choice.selector, sort: nil, container: .mp4, appleCompatible: true, expectedSizes: [:]))
+                let output = try await engine.run(job) { _ in }
+                let info = await mediaTools.probe(output.files[0])
+                print("  file: \(output.files[0].lastPathComponent) video=\(info?.videoCodec ?? "-")/\(info?.videoTag ?? "-") audio=\(info?.audioCodec ?? "-") \(info?.width ?? 0)x\(info?.height ?? 0)")
+                if info?.audioCodec == nil { throw DownlyError.message("NO AUDIO STREAM") }
+            }
+            await soft("Extract TikTok sound as MP3 with cover") {
+                guard case .video(let video) = try await analyzer.analyze(tiktok) else { throw DownlyError.message("not a video") }
+                let job = DownloadJob(title: video.summary.title, subtitle: "", detail: "MP3", thumbnail: nil, platform: .tiktok, kind: .audio(url: video.sourceURL, format: .mp3, squareCover: true))
+                let output = try await engine.run(job) { _ in }
+                let result = try await ProcessRunner.run(tools.ffprobe, ["-v", "quiet", "-show_entries", "stream=codec_name,codec_type:format_tags=title,artist", "-of", "compact", output.files[0].path])
+                print("  file: \(output.files[0].lastPathComponent)")
+                print("  " + result.stdout.split(separator: "\n").joined(separator: " | "))
+            }
+            await soft("Tag MP3 with Spotify cover & metadata") {
+                let work = FileManager.default.temporaryDirectory.appendingPathComponent("downly-tag-\(UUID().uuidString)")
+                try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+                let source = work.appendingPathComponent("raw.mp3")
+                let generated = try await ProcessRunner.run(tools.ffmpeg, ["-hide_banner", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=4", "-c:a", "libmp3lame", "-b:a", "192k", source.path])
+                guard generated.succeeded else { throw DownlyError.message("ffmpeg sine failed: \(generated.stderr.suffix(200))") }
+                let collection = try await SpotifyClient().fetch(type: "track", id: "4cOdK2wGLETKBW3PvgPWqT")
+                let track = await SpotifyClient().enrich(collection.tracks[0])
+                let cover = work.appendingPathComponent("cover.jpg")
+                if let url = track.cover {
+                    try await FileDownloader.download(url, to: cover)
+                }
+                let tags = TrackTags(title: track.title, artist: track.artistLine, albumArtist: track.artists.first, album: track.album, date: track.releaseDate.map { String($0.prefix(10)) }, track: "1", cover: track.cover)
+                let tagged = try await mediaTools.tagAudio(source, tags: tags, coverFile: cover, outputName: "\(track.artists.first ?? "") - \(track.title)")
+                let result = try await ProcessRunner.run(tools.ffprobe, ["-v", "quiet", "-show_entries", "stream=codec_name,codec_type:stream_disposition=attached_pic:format_tags", "-of", "compact", tagged.path])
+                print("  file: \(tagged.lastPathComponent)")
+                print("  " + result.stdout.split(separator: "\n").joined(separator: " | "))
+                guard result.stdout.contains("attached_pic=1") else { throw DownlyError.message("cover not embedded") }
+            }
+            await soft("Convert VP9 to QuickTime-ready HEVC") {
+                let work = FileManager.default.temporaryDirectory.appendingPathComponent("downly-vp9-\(UUID().uuidString)")
+                try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+                let source = work.appendingPathComponent("clip.webm")
+                let generated = try await ProcessRunner.run(tools.ffmpeg, ["-hide_banner", "-y", "-f", "lavfi", "-i", "testsrc2=size=1920x1080:rate=30", "-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000", "-t", "4", "-c:v", "libvpx-vp9", "-b:v", "2M", "-deadline", "realtime", "-cpu-used", "8", "-c:a", "libopus", "-shortest", source.path])
+                guard generated.succeeded else { throw DownlyError.message("ffmpeg vp9 failed: \(generated.stderr.suffix(300))") }
+                let start = Date()
+                let converted = try await mediaTools.makeAppleCompatible(source) { _ in }
+                let info = await mediaTools.probe(converted)
+                print(String(format: "  converted in %.1fs → %@ video=%@/%@ audio=%@", Date().timeIntervalSince(start), converted.lastPathComponent, info?.videoCodec ?? "-", info?.videoTag ?? "-", info?.audioCodec ?? "-"))
+                guard info?.videoCodec == "hevc" || info?.videoCodec == "h264", info?.audioCodec == "aac" else { throw DownlyError.message("unexpected codecs") }
+            }
+            await soft("Download Instagram carousel") {
+                let link = LinkParser.parse("https://www.instagram.com/p/BQ0eAlwhDrw/")!
+                guard case .gallery(let gallery) = try await analyzer.analyze(link) else { throw DownlyError.message("not a gallery") }
+                let job = DownloadJob(title: gallery.summary.title, subtitle: "", detail: "", thumbnail: nil, platform: .instagram, kind: .gallery(items: gallery.allItems, folder: gallery.folderName))
+                let output = try await engine.run(job) { _ in }
+                for file in output.files {
+                    let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                    let info = await mediaTools.probe(file)
+                    print("  \(file.lastPathComponent) \(size / 1024) KB video=\(info?.videoCodec ?? "-") audio=\(info?.audioCodec ?? "-")")
+                }
+            }
             await soft("Download YouTube 360p with sound") {
                 let link = LinkParser.parse("https://www.youtube.com/watch?v=aqz-KE-bpKQ")!
                 guard case .video(let video) = try await analyzer.analyze(link) else { throw DownlyError.message("not a video") }
                 let choices = FormatPlanner.videoChoices(formats: video.formats, duration: video.summary.duration, preferences: VideoPreferences(), preferMuxed: false)
                 guard let choice = choices.first(where: { $0.tier == 360 }) ?? choices.last else { throw DownlyError.message("no choices") }
                 let job = DownloadJob(title: video.summary.title, subtitle: "", detail: choice.label, thumbnail: nil, platform: .youtube, kind: .video(url: video.sourceURL, selector: choice.selector, sort: nil, container: .mp4, appleCompatible: true, expectedSizes: [:]))
-                let output = try await engine.run(job) { progress in
-                    if let fraction = progress.fraction, Int(fraction * 100) % 25 == 0 {
-                        print("    \(progress.phase) \(Int(fraction * 100))%")
-                    }
-                }
-                let info = await MediaTools(tools: tools).probe(output.files[0])
+                let output = try await engine.run(job) { _ in }
+                let info = await mediaTools.probe(output.files[0])
                 print("  file: \(output.files[0].lastPathComponent) video=\(info?.videoCodec ?? "-") audio=\(info?.audioCodec ?? "-")")
                 if info?.audioCodec == nil { throw DownlyError.message("NO AUDIO STREAM") }
-            }
-            await soft("Download Spotify track as MP3") {
-                let collection = try await SpotifyClient().fetch(type: "track", id: "4cOdK2wGLETKBW3PvgPWqT")
-                let job = DownloadJob(title: collection.tracks[0].title, subtitle: "", detail: "MP3", thumbnail: nil, platform: .spotify, kind: .spotify(track: collection.tracks[0], format: .mp3, folder: nil))
-                let output = try await engine.run(job) { _ in }
-                let result = try await ProcessRunner.run(tools.ffprobe, ["-v", "quiet", "-show_entries", "format_tags:stream=codec_name,disposition", "-of", "json", output.files[0].path])
-                print("  file: \(output.files[0].lastPathComponent) \(output.note ?? "")")
-                print("  tags: \(J(string: result.stdout)["format"]["tags"].dictionary.mapValues { $0.string ?? "" })")
             }
             try? FileManager.default.removeItem(at: destination)
         }

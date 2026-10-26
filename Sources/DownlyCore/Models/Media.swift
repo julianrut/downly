@@ -63,7 +63,7 @@ public struct MediaFormat: Sendable, Hashable {
         }
     }
 
-    public init(id: String, ext: String? = nil, vcodec: String? = nil, acodec: String? = nil, width: Int? = nil, height: Int? = nil, fps: Double? = nil, tbr: Double? = nil, abr: Double? = nil, filesize: Int64? = nil, dynamicRange: String? = nil, note: String? = nil) {
+    public init(id: String, ext: String? = nil, vcodec: String? = nil, acodec: String? = nil, width: Int? = nil, height: Int? = nil, fps: Double? = nil, tbr: Double? = nil, abr: Double? = nil, filesize: Int64? = nil, dynamicRange: String? = nil, note: String? = nil, languagePreference: Int? = nil) {
         self.id = id
         self.ext = ext
         self.vcodec = vcodec
@@ -78,7 +78,7 @@ public struct MediaFormat: Sendable, Hashable {
         self.dynamicRange = dynamicRange
         self.protocolName = nil
         self.language = nil
-        self.languagePreference = nil
+        self.languagePreference = languagePreference
         self.note = note
         self.hasDRM = false
         self.audioChannels = nil
@@ -303,6 +303,15 @@ public struct PlaylistEntry: Sendable, Hashable, Identifiable, Codable {
     public let duration: Double?
     public let thumbnail: URL?
     public let author: String?
+
+    public init(id: String, title: String, url: String, duration: Double?, thumbnail: URL?, author: String?) {
+        self.id = id
+        self.title = title
+        self.url = url
+        self.duration = duration
+        self.thumbnail = thumbnail
+        self.author = author
+    }
 }
 
 public struct VideoAnalysis: Sendable {
@@ -314,6 +323,17 @@ public struct VideoAnalysis: Sendable {
     public var playlistURL: String?
     public var usedCookies: Bool
     public var isMusicSource: Bool
+
+    public init(summary: MediaSummary, id: String, sourceURL: String, formats: [MediaFormat], isLive: Bool = false, playlistURL: String? = nil, usedCookies: Bool = false, isMusicSource: Bool = false) {
+        self.summary = summary
+        self.id = id
+        self.sourceURL = sourceURL
+        self.formats = formats
+        self.isLive = isLive
+        self.playlistURL = playlistURL
+        self.usedCookies = usedCookies
+        self.isMusicSource = isMusicSource
+    }
 
     public var hasVideo: Bool {
         formats.contains { $0.hasVideo }
@@ -328,6 +348,12 @@ public struct PlaylistAnalysis: Sendable {
     public var summary: MediaSummary
     public var entries: [PlaylistEntry]
     public var usedCookies: Bool
+
+    public init(summary: MediaSummary, entries: [PlaylistEntry], usedCookies: Bool = false) {
+        self.summary = summary
+        self.entries = entries
+        self.usedCookies = usedCookies
+    }
 }
 
 public struct SpotifyTrack: Codable, Sendable, Hashable, Identifiable {
@@ -378,6 +404,13 @@ public struct MusicCollection: Sendable {
     public var kind: MusicCollectionKind
     public var tracks: [SpotifyTrack]
     public var totalTracks: Int?
+
+    public init(summary: MediaSummary, kind: MusicCollectionKind, tracks: [SpotifyTrack], totalTracks: Int? = nil) {
+        self.summary = summary
+        self.kind = kind
+        self.tracks = tracks
+        self.totalTracks = totalTracks
+    }
 }
 
 public struct GalleryItem: Codable, Sendable, Hashable, Identifiable {
@@ -432,6 +465,13 @@ public struct Gallery: Sendable {
     public var sections: [GallerySection]
     public var folderName: String
     public var isProfile: Bool
+
+    public init(summary: MediaSummary, sections: [GallerySection], folderName: String, isProfile: Bool = false) {
+        self.summary = summary
+        self.sections = sections
+        self.folderName = folderName
+        self.isProfile = isProfile
+    }
 
     public var allItems: [GalleryItem] {
         sections.flatMap(\.items)

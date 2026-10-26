@@ -286,9 +286,12 @@ public struct DownloadEngine: Sendable {
     func runSpotify(track input: SpotifyTrack, format: AudioFormat, folder: String?, staging: URL, progress: @escaping @Sendable (JobProgress) -> Void) async throws -> JobOutput {
         progress(JobProgress(phase: .preparing("Finding on YouTube Music")))
         let spotify = SpotifyClient()
-        let track = await spotify.enrich(input)
+        var track = await spotify.enrich(input)
         let resolver = TrackResolver(ytdlp: ytdlp)
         let (match, _) = try await resolver.resolve(track)
+        if track.album == nil, let album = match.album, !album.isEmpty {
+            track.album = album
+        }
         let matchNote = "Matched “\(match.title)”" + (match.artists.isEmpty ? "" : " by \(match.artists.joined(separator: ", "))")
         progress(JobProgress(phase: .preparing("Downloading audio"), note: matchNote))
 
