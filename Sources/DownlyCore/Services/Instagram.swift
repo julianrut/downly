@@ -109,6 +109,11 @@ public struct InstagramClient: Sendable {
         throw lastError ?? DownlyError.needsLogin(.instagram, "Instagram didn’t share this post without signing in.")
     }
 
+    public func debugProduct(shortcode: String) async -> J? {
+        guard let mediaID = InstagramClient.mediaID(fromShortcode: shortcode) else { return nil }
+        return try? await anonymousProduct(shortcode: shortcode, mediaID: mediaID)
+    }
+
     func anonymousProduct(shortcode: String, mediaID: String) async throws -> J? {
         let pageURL = URL(string: "https://www.instagram.com/p/\(shortcode)/")!
         let page = try await http.get(pageURL, headers: [

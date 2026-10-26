@@ -72,26 +72,29 @@ struct BackdropGlow: View {
     var body: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
-            let strength = colorScheme == .dark ? 0.34 : 0.2
-            ZStack {
-                glow(Theme.indigo, strength, center: UnitPoint(x: 0.18, y: 0), radius: width * 0.55)
-                glow(Theme.pink, strength, center: UnitPoint(x: 0.85, y: 0), radius: width * 0.5)
-                glow(Theme.violet, strength * 0.9, center: UnitPoint(x: 0.5, y: 0), radius: width * 0.42)
+            let strength = colorScheme == .dark ? 0.42 : 0.26
+            ZStack(alignment: .top) {
+                glow(Theme.indigo, strength, width: width * 0.9, height: 360)
+                    .offset(x: -width * 0.28, y: -170)
+                glow(Theme.pink, strength, width: width * 0.85, height: 340)
+                    .offset(x: width * 0.3, y: -165)
+                glow(Theme.violet, strength * 0.85, width: width * 0.7, height: 300)
+                    .offset(y: -150)
             }
-            .frame(width: width, height: 340)
+            .frame(width: width, alignment: .top)
             .allowsHitTesting(false)
         }
         .ignoresSafeArea()
     }
 
-    func glow(_ color: Color, _ opacity: Double, center: UnitPoint, radius: CGFloat) -> some View {
-        RadialGradient(
-            colors: [color.opacity(opacity), color.opacity(opacity * 0.45), color.opacity(0)],
-            center: center,
-            startRadius: 0,
-            endRadius: radius
+    func glow(_ color: Color, _ opacity: Double, width: CGFloat, height: CGFloat) -> some View {
+        EllipticalGradient(
+            colors: [color.opacity(opacity), color.opacity(opacity * 0.5), color.opacity(opacity * 0.12), color.opacity(0)],
+            center: .center,
+            startRadiusFraction: 0,
+            endRadiusFraction: 0.5
         )
-        .scaleEffect(x: 1, y: 0.62, anchor: .top)
+        .frame(width: width, height: height)
     }
 }
 

@@ -68,8 +68,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
-            for window in sender.windows where window.canBecomeMain {
-                window.makeKeyAndOrderFront(nil)
+            let candidates = sender.windows.filter { $0.canBecomeMain }
+            let main = candidates.first { $0.identifier?.rawValue.hasPrefix("main") == true } ?? candidates.first { $0.title == "Downly" }
+            if let main {
+                main.makeKeyAndOrderFront(nil)
                 return false
             }
         }

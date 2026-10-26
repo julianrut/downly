@@ -122,6 +122,24 @@ struct SelfTest {
                 print("  other analysis")
             }
         }
+        for code in ["Chunk8-jurw", "CDUMkliABpa", "BQ0eAlwhDrw"] {
+            await soft("Instagram formats \(code)") {
+                if let product = await InstagramClient(session: nil).debugProduct(shortcode: code) {
+                    let medias = product["carousel_media"].array.isEmpty ? [product] : product["carousel_media"].array
+                    for media in medias {
+                        print("  native: has_audio=\(media["has_audio"].bool.map(String.init) ?? "nil") versions=\(media["video_versions"].array.count) dash=\(media["video_dash_manifest"].string?.count ?? 0) codec=\(media["video_codec"].string ?? "-")")
+                    }
+                } else {
+                    print("  native: no product")
+                }
+                let json = try await YTDLP(tools: tools).extractInfo("https://www.instagram.com/p/\(code)/", playlist: true, useCookies: false, flat: false, extra: ["--no-flat-playlist"])
+                let entries = json["entries"].array.isEmpty ? [json] : json["entries"].array
+                for entry in entries {
+                    let formats = entry["formats"].array.map { "\($0["format_id"].string ?? "?"):\($0["vcodec"].string ?? "nil")/\($0["acodec"].string ?? "nil")" }
+                    print("  yt-dlp: \(formats.joined(separator: " "))")
+                }
+            }
+        }
         await soft("Instagram profile (anonymous)") {
             let link = LinkParser.parse("https://www.instagram.com/instagram/")!
             guard case .gallery(let gallery) = try await analyzer.analyze(link) else { throw DownlyError.message("not a gallery") }
