@@ -2,17 +2,30 @@ import AppKit
 import DownlyCore
 import SwiftUI
 
+enum SettingsTab: Hashable {
+    case general
+    case formats
+    case accounts
+    case engine
+}
+
 struct SettingsView: View {
+    @State var tab: SettingsTab = .general
+
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             GeneralSettings()
                 .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
             FormatSettings()
                 .tabItem { Label("Formats", systemImage: "slider.horizontal.3") }
+                .tag(SettingsTab.formats)
             AccountSettings()
                 .tabItem { Label("Accounts", systemImage: "person.crop.circle") }
+                .tag(SettingsTab.accounts)
             EngineSettingsView()
                 .tabItem { Label("Engine", systemImage: "shippingbox") }
+                .tag(SettingsTab.engine)
         }
         .frame(width: 560)
     }
@@ -84,7 +97,7 @@ struct GeneralSettings: View {
 }
 
 struct FormatSettings: View {
-    @AppStorage(PrefKey.defaultQuality) var defaultQuality = 0
+    @AppStorage(PrefKey.defaultQuality) var defaultQuality = 1080
     @AppStorage(PrefKey.videoContainer) var container = VideoContainer.mp4
     @AppStorage(PrefKey.appleCompatible) var appleCompatible = true
     @AppStorage(PrefKey.preferHDR) var preferHDR = false

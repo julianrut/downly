@@ -349,8 +349,13 @@ public struct DownloadEngine: Sendable {
             progress(JobProgress(phase: .downloading, fraction: base, note: items.count > 1 ? "Item \(index + 1) of \(items.count)" : nil))
             var produced: URL?
             if item.kind == .video, let source = item.ytdlpURL {
-                let args = ["-f", "bv*+ba/b", "--merge-output-format", "mp4", "--remux-video", "mp4", "--no-playlist"]
-                    + outputArguments(staging: staging, template: "\(FileNamer.sanitize(item.suggestedName)).%(ext)s")
+                var args = ["-f", "bv*+ba/b", "-S", "vcodec:h264,res,acodec:aac", "--merge-output-format", "mp4", "--remux-video", "mp4"]
+                if let position = item.playlistIndex {
+                    args += ["--yes-playlist", "--playlist-items", String(position)]
+                } else {
+                    args += ["--no-playlist"]
+                }
+                args += outputArguments(staging: staging, template: "\(FileNamer.sanitize(item.suggestedName)).%(ext)s")
                 let itemNote: String? = items.count > 1 ? "Item \(index + 1) of \(items.count)" : nil
                 if let files = try? await ytdlpRun(arguments: args, url: source, expected: [:], progress: { update in
                     var copy = update

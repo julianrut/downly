@@ -179,8 +179,17 @@ public struct InstagramClient: Sendable {
             }
         }
         guard !items.isEmpty else { throw DownlyError.nothingToDownload }
-        if items.count == 1, items[0].kind == .video {
-            items[0].ytdlpURL = url.absoluteString
+        if mediaItems.count == 1 {
+            if items[0].kind == .video {
+                items[0].ytdlpURL = url.absoluteString
+            }
+        } else {
+            for index in items.indices where items[index].kind == .video {
+                if let position = mediaItems.firstIndex(where: { ($0["pk"].string ?? $0["id"].string) == items[index].id }) {
+                    items[index].ytdlpURL = url.absoluteString
+                    items[index].playlistIndex = position + 1
+                }
+            }
         }
         let title = InstagramClient.titleFrom(caption: caption, fallback: username.map { "Post by @\($0)" } ?? "Instagram post")
         let summary = MediaSummary(

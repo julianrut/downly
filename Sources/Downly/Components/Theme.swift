@@ -72,26 +72,26 @@ struct BackdropGlow: View {
     var body: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
+            let strength = colorScheme == .dark ? 0.34 : 0.2
             ZStack {
-                Ellipse()
-                    .fill(Theme.indigo)
-                    .frame(width: width * 0.55, height: 220)
-                    .offset(x: -width * 0.22, y: -150)
-                Ellipse()
-                    .fill(Theme.pink)
-                    .frame(width: width * 0.5, height: 200)
-                    .offset(x: width * 0.24, y: -140)
-                Ellipse()
-                    .fill(Theme.violet)
-                    .frame(width: width * 0.45, height: 160)
-                    .offset(x: 0, y: -110)
+                glow(Theme.indigo, strength, center: UnitPoint(x: 0.18, y: 0), radius: width * 0.55)
+                glow(Theme.pink, strength, center: UnitPoint(x: 0.85, y: 0), radius: width * 0.5)
+                glow(Theme.violet, strength * 0.9, center: UnitPoint(x: 0.5, y: 0), radius: width * 0.42)
             }
-            .frame(width: width, height: 260, alignment: .top)
-            .blur(radius: 90)
-            .opacity(colorScheme == .dark ? 0.32 : 0.22)
+            .frame(width: width, height: 340)
             .allowsHitTesting(false)
         }
         .ignoresSafeArea()
+    }
+
+    func glow(_ color: Color, _ opacity: Double, center: UnitPoint, radius: CGFloat) -> some View {
+        RadialGradient(
+            colors: [color.opacity(opacity), color.opacity(opacity * 0.45), color.opacity(0)],
+            center: center,
+            startRadius: 0,
+            endRadius: radius
+        )
+        .scaleEffect(x: 1, y: 0.62, anchor: .top)
     }
 }
 

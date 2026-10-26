@@ -28,14 +28,11 @@ struct SetupView: View {
     }
 
     var body: some View {
-        VStack(spacing: 26) {
-            Spacer(minLength: 20)
+        VStack(spacing: 22) {
+            Spacer(minLength: 10)
             ZStack {
-                Circle()
-                    .fill(Theme.brand)
-                    .frame(width: 150, height: 150)
-                    .blur(radius: 50)
-                    .opacity(0.45)
+                RadialGradient(colors: [Theme.violet.opacity(0.35), Theme.pink.opacity(0.12), .clear], center: .center, startRadius: 10, endRadius: 120)
+                    .frame(width: 240, height: 240)
                 Image(nsImage: NSApp.applicationIconImage ?? NSImage())
                     .resizable()
                     .interpolation(.high)
@@ -51,6 +48,7 @@ struct SetupView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(spacing: 0) {
@@ -86,9 +84,10 @@ struct SetupView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            Spacer(minLength: 20)
+            Spacer(minLength: 10)
         }
-        .padding(32)
+        .padding(.horizontal, 32)
+        .padding(.vertical, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

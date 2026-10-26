@@ -77,10 +77,14 @@ enum SnapshotRunner {
         model.analysis = .idle
         model.input = ""
         model.downloads.items = []
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
-        if let settings = NSApp.windows.first(where: { $0.isVisible && $0 !== window }) {
-            await capture(settings, "10-settings", in: directory)
+        for (tab, name) in [(SettingsTab.formats, "10-settings-formats"), (SettingsTab.accounts, "11-settings-accounts")] {
+            let settings = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 560), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            settings.title = "Settings"
+            settings.contentView = NSHostingView(rootView: SettingsView(tab: tab).environment(model).tint(Theme.accent))
+            settings.center()
+            settings.makeKeyAndOrderFront(nil)
+            await capture(settings, name, in: directory)
+            settings.orderOut(nil)
         }
         print("snapshot: done")
         exit(0)

@@ -48,7 +48,7 @@ struct Preferences {
             PrefKey.videoContainer: VideoContainer.mp4.rawValue,
             PrefKey.appleCompatible: true,
             PrefKey.preferHDR: false,
-            PrefKey.defaultQuality: 0,
+            PrefKey.defaultQuality: 1080,
             PrefKey.audioFormat: AudioFormat.mp3.rawValue,
             PrefKey.musicFormat: AudioFormat.mp3.rawValue,
             PrefKey.embedMetadata: true,

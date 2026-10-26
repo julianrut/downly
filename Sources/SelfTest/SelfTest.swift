@@ -196,6 +196,37 @@ struct SelfTest {
                     print("  \(file.lastPathComponent) \(size / 1024) KB video=\(info?.videoCodec ?? "-") audio=\(info?.audioCodec ?? "-")")
                 }
             }
+            await soft("Merge separate video + audio streams (Vimeo)") {
+                let link = LinkParser.parse("https://vimeo.com/76979871")!
+                guard case .video(let video) = try await analyzer.analyze(link) else { throw DownlyError.message("not a video") }
+                let choices = FormatPlanner.videoChoices(formats: video.formats, duration: video.summary.duration, preferences: VideoPreferences(), preferMuxed: false)
+                print("  " + choices.map { "\($0.label)[\($0.video.id)+\($0.audio?.id ?? "-")]" }.joined(separator: " "))
+                guard let choice = choices.first(where: { $0.tier <= 540 }) ?? choices.last else { throw DownlyError.message("no choices") }
+                let job = DownloadJob(title: video.summary.title, subtitle: "", detail: choice.label, thumbnail: nil, platform: .web, kind: .video(url: video.sourceURL, selector: choice.selector, sort: nil, container: .mp4, appleCompatible: true, expectedSizes: [:]))
+                let output = try await engine.run(job) { _ in }
+                let info = await mediaTools.probe(output.files[0])
+                print("  file: \(output.files[0].lastPathComponent) video=\(info?.videoCodec ?? "-") audio=\(info?.audioCodec ?? "-") \(info?.width ?? 0)x\(info?.height ?? 0)")
+                if info?.audioCodec == nil { throw DownlyError.message("NO AUDIO STREAM") }
+            }
+            await soft("Download Instagram reel with sound") {
+                let link = LinkParser.parse("https://www.instagram.com/reel/Chunk8-jurw/")!
+                let analysis = try await analyzer.analyze(link)
+                let job: DownloadJob
+                switch analysis {
+                case .gallery(let gallery):
+                    job = DownloadJob(title: gallery.summary.title, subtitle: "", detail: "", thumbnail: nil, platform: .instagram, kind: .gallery(items: gallery.allItems, folder: gallery.folderName))
+                case .video(let video):
+                    let choice = FormatPlanner.videoChoices(formats: video.formats, duration: video.summary.duration, preferences: VideoPreferences(), preferMuxed: true).first
+                    job = DownloadJob(title: video.summary.title, subtitle: "", detail: "", thumbnail: nil, platform: .instagram, kind: .video(url: video.sourceURL, selector: choice?.selector ?? "bv*+ba/b", sort: nil, container: .mp4, appleCompatible: true, expectedSizes: [:]))
+                default:
+                    throw DownlyError.message("unexpected analysis")
+                }
+                let output = try await engine.run(job) { _ in }
+                for file in output.files {
+                    let info = await mediaTools.probe(file)
+                    print("  \(file.lastPathComponent) video=\(info?.videoCodec ?? "-") audio=\(info?.audioCodec ?? "-") \(info?.width ?? 0)x\(info?.height ?? 0)")
+                }
+            }
             await soft("Download YouTube 360p with sound") {
                 let link = LinkParser.parse("https://www.youtube.com/watch?v=aqz-KE-bpKQ")!
                 guard case .video(let video) = try await analyzer.analyze(link) else { throw DownlyError.message("not a video") }

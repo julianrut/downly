@@ -485,7 +485,7 @@ struct PlaylistCard: View {
     @State var selected: Set<String> = []
     @State var prepared = false
 
-    static let qualityOptions = [2160, 1440, 1080, 720, 480, 360]
+    static let qualityOptions = [4320, 2160, 1440, 1080, 720, 480, 360]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

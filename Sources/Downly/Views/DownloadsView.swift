@@ -61,8 +61,8 @@ struct DownloadRow: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                 status
-                if item.isActive {
-                    DownloadProgressBar(fraction: item.state == .queued ? 0 : item.fraction)
+                if item.state == .running {
+                    DownloadProgressBar(fraction: item.fraction)
                         .padding(.top, 2)
                 }
             }
@@ -191,7 +191,7 @@ struct DownloadRow: View {
         if let size = Format.bytes(item.fileSize) {
             parts.append(size)
         }
-        if !item.filesExist {
+        if !item.files.isEmpty && !item.filesExist {
             parts.append("moved or deleted")
         }
         return parts.joined(separator: " · ")

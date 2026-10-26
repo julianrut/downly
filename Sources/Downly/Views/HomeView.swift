@@ -1,6 +1,7 @@
 import AppKit
 import DownlyCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct RootView: View {
     @Environment(AppModel.self) var model
@@ -123,13 +124,7 @@ struct TopBar: View {
             .help("Settings")
         }
         .padding(.horizontal, 14)
-        .frame(height: 40)
-        .overlay {
-            Text("Downly")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .allowsHitTesting(false)
-        }
+        .frame(height: 34)
         .animation(.easeOut(duration: 0.2), value: model.downloads.activeCount)
     }
 }

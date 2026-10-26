@@ -427,9 +427,10 @@ public struct GalleryItem: Codable, Sendable, Hashable, Identifiable {
     public var headers: [String: String]
     public var suggestedName: String
     public var ytdlpURL: String?
+    public var playlistIndex: Int?
     public var takenAt: Date?
 
-    public init(id: String, kind: Kind, url: URL, thumbnail: URL? = nil, width: Int? = nil, height: Int? = nil, headers: [String: String] = [:], suggestedName: String, ytdlpURL: String? = nil, takenAt: Date? = nil) {
+    public init(id: String, kind: Kind, url: URL, thumbnail: URL? = nil, width: Int? = nil, height: Int? = nil, headers: [String: String] = [:], suggestedName: String, ytdlpURL: String? = nil, playlistIndex: Int? = nil, takenAt: Date? = nil) {
         self.id = id
         self.kind = kind
         self.url = url
@@ -439,6 +440,7 @@ public struct GalleryItem: Codable, Sendable, Hashable, Identifiable {
         self.headers = headers
         self.suggestedName = suggestedName
         self.ytdlpURL = ytdlpURL
+        self.playlistIndex = playlistIndex
         self.takenAt = takenAt
     }
 
