@@ -390,6 +390,9 @@ struct VideoCard: View {
         .onAppear {
             if tier == nil {
                 tier = defaultTier
+                if link.isMusic {
+                    mode = .audio
+                }
             }
         }
     }

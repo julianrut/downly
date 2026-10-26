@@ -127,7 +127,18 @@ public enum LinkParser {
                 return ParsedLink(url: canonical, platform: .youtube, kind: .youtubePlaylist(id: list), playlistID: list, isMusic: isMusic)
             }
             if segments.isEmpty { return nil }
-            return ParsedLink(url: url, platform: .youtube, kind: .youtubeOther, isMusic: isMusic)
+            var target = url
+            if let first = segments.first, first.hasPrefix("@") || ["channel", "c", "user"].contains(first) {
+                let depth = first.hasPrefix("@") ? 1 : 2
+                if segments.count == depth {
+                    var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+                    components?.query = nil
+                    components?.fragment = nil
+                    components?.path = "/" + segments.joined(separator: "/") + "/videos"
+                    target = components?.url ?? url
+                }
+            }
+            return ParsedLink(url: target, platform: .youtube, kind: .youtubeOther, isMusic: isMusic)
         }
 
         if host == "spotify.link" || host == "spotify.app.link" {
@@ -150,7 +161,7 @@ public enum LinkParser {
             case "album": return ParsedLink(url: canonical, platform: .spotify, kind: .spotifyAlbum(id: id), isMusic: true)
             case "playlist": return ParsedLink(url: canonical, platform: .spotify, kind: .spotifyPlaylist(id: id), isMusic: true)
             case "artist": return ParsedLink(url: canonical, platform: .spotify, kind: .spotifyArtist(id: id), isMusic: true)
-            default: return nil
+            default: return ParsedLink(url: canonical, platform: .spotify, kind: .generic, isMusic: true)
             }
         }
 

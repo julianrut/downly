@@ -10,6 +10,8 @@ final class LinkParserTests: XCTestCase {
         XCTAssertEqual(LinkParser.parse("https://music.youtube.com/watch?v=abcdEFGhijk")?.isMusic, true)
         XCTAssertEqual(LinkParser.parse("https://www.youtube.com/playlist?list=PLxyz")?.kind, .youtubePlaylist(id: "PLxyz"))
         XCTAssertEqual(LinkParser.parse("https://www.youtube.com/@mkbhd")?.kind, .youtubeOther)
+        XCTAssertEqual(LinkParser.parse("https://www.youtube.com/@mkbhd")?.url.absoluteString, "https://www.youtube.com/@mkbhd/videos")
+        XCTAssertEqual(LinkParser.parse("https://www.youtube.com/@mkbhd/shorts")?.url.absoluteString, "https://www.youtube.com/@mkbhd/shorts")
     }
 
     func testSpotifyForms() {

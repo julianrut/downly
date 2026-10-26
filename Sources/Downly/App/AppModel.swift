@@ -41,6 +41,7 @@ final class AppModel {
     @ObservationIgnored private var lastClipboardChange = -1
     @ObservationIgnored private var dismissedClipboard: String?
     @ObservationIgnored private var started = false
+    @ObservationIgnored private var updatesScheduled = false
 
     init() {
         Preferences.register()
@@ -73,9 +74,7 @@ final class AppModel {
             toolVersions = await toolchain.versions()
             setup = .ready
             checkClipboard()
-            if Preferences.autoUpdateEngine {
-                Task { await self.updateEngine(force: false) }
-            }
+            scheduleEngineUpdates()
             return
         }
         setup = reinstall && tools != nil ? .ready : .installing
@@ -105,6 +104,9 @@ final class AppModel {
             }
             engineMessage = reinstall ? "Components reinstalled." : nil
             checkClipboard()
+            if !reinstall {
+                scheduleEngineUpdates()
+            }
         } catch {
             if tools == nil {
                 setup = .failed(error.friendlyMessage)
@@ -113,6 +115,19 @@ final class AppModel {
             }
         }
         isUpdatingEngine = false
+    }
+
+    func scheduleEngineUpdates() {
+        guard !updatesScheduled else { return }
+        updatesScheduled = true
+        Task {
+            while !Task.isCancelled {
+                if Preferences.autoUpdateEngine {
+                    await self.updateEngine(force: false)
+                }
+                try? await Task.sleep(nanoseconds: 6 * 3600 * 1_000_000_000)
+            }
+        }
     }
 
     func updateEngine(force: Bool) async {
@@ -257,7 +272,7 @@ final class AppModel {
             clipboardSuggestion = nil
             return
         }
-        guard let link = LinkParser.firstLink(in: text), link.platform != .web || text.hasPrefix("http") else {
+        guard let link = LinkParser.firstLink(in: text), link.platform != .web else {
             clipboardSuggestion = nil
             return
         }
