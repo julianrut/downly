@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+dist/
+dist-mac/
+snapshots/
+src-tauri/target/
+src-tauri/gen/schemas/
+.tools-cache/
