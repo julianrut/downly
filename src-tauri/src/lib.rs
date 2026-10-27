@@ -37,28 +37,14 @@ pub fn open_settings(app: &AppHandle) {
     }
     let builder = WebviewWindowBuilder::new(app, "settings", WebviewUrl::default())
         .title("Settings")
-        .inner_size(600.0, 470.0)
+        .inner_size(520.0, 400.0)
         .resizable(false)
         .minimizable(false)
         .maximizable(false)
         .visible(false)
         .center();
     #[cfg(target_os = "macos")]
-    let builder = {
-        use tauri::utils::config::WindowEffectsConfig;
-        use tauri::window::{Effect, EffectState};
-        builder
-            .title_bar_style(tauri::TitleBarStyle::Overlay)
-            .hidden_title(true)
-            .transparent(true)
-            .effects(WindowEffectsConfig {
-                effects: vec![Effect::UnderWindowBackground],
-                state: Some(EffectState::FollowsWindowActiveState),
-                radius: None,
-                color: None,
-                interactive: false,
-            })
-    };
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Overlay).hidden_title(true);
     if builder.build().is_ok() {
         let handle = app.clone();
         tauri::async_runtime::spawn(async move {

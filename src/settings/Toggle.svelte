@@ -15,46 +15,40 @@
 <style>
   .switch {
     position: relative;
-    width: 32px;
-    height: 19px;
-    border-radius: 999px;
-    background: var(--fill-3);
-    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
-    transition: background 0.22s ease;
+    width: 28px;
+    height: 16px;
+    border-radius: 2px;
     flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+    transition:
+      background 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
   .switch.on {
-    background: var(--brand-h);
+    background: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink);
   }
 
   .switch:disabled {
-    opacity: 0.4;
+    opacity: 0.35;
   }
 
   .knob {
     position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow:
-      0 1px 2.5px rgba(0, 0, 0, 0.25),
-      0 0 0 0.5px rgba(0, 0, 0, 0.04);
-    transition: transform 0.28s var(--ease-spring);
+    top: 3px;
+    left: 3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 1px;
+    background: var(--text-2);
+    transition:
+      transform 0.22s var(--ease),
+      background 0.18s ease;
   }
 
   .switch.on .knob {
-    transform: translateX(13px);
-  }
-
-  .switch:active:not(:disabled) .knob {
-    width: 18px;
-  }
-
-  .switch.on:active:not(:disabled) .knob {
-    transform: translateX(10px);
+    transform: translateX(12px);
+    background: var(--on-ink);
   }
 </style>

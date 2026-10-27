@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { CircleAlert, CircleCheck, Clock, CircleX, Folder, Play, RotateCw, Search, Trash2, X } from '@lucide/svelte';
-  import PlatformBadge from './PlatformBadge.svelte';
+  import { Folder, Play, RotateCw, Search, X } from '@lucide/svelte';
   import ProgressBar from './ProgressBar.svelte';
   import Thumb from './Thumb.svelte';
   import { api, popupMenu, type MenuEntry } from '../lib/api';
@@ -14,34 +13,22 @@
   let finished = $derived(item.state === 'finished');
   let multiple = $derived(item.files.length > 1);
 
-  let running = $derived.by(() => {
+  let status = $derived.by(() => {
+    switch (item.state) {
+      case 'queued':
+        return 'Waiting';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'failed':
+        return item.error ?? 'Failed';
+      case 'finished':
+        return [item.job.detail, bytes(item.fileSize), item.files.length && !item.filesExist ? 'Missing' : null].filter(Boolean).join('  ·  ');
+    }
     const phase = item.phase;
-    if (phase?.kind === 'preparing') {
-      if (item.note && phase.message.includes('Downloading')) return item.note;
-      return `${phase.message}…`;
-    }
-    if (phase?.kind === 'processing') {
-      if (item.fraction && item.fraction > 0) return `${phase.message}… ${Math.round(item.fraction * 100)}%`;
-      return `${phase.message}…`;
-    }
-    const parts: string[] = [];
-    const done = bytes(item.downloaded);
-    const total = bytes(item.total);
-    if (done && total) parts.push(`${done} of ${total}`);
-    else if (item.fraction != null) parts.push(`${Math.round(item.fraction * 100)}%`);
-    else parts.push('Downloading');
-    const rate = speed(item.speed);
-    if (rate) parts.push(rate);
-    const left = eta(item.eta);
-    if (left) parts.push(left);
-    return parts.join(' · ');
+    if (phase?.kind === 'preparing') return phase.message.includes('Downloading') && item.note ? item.note : phase.message;
+    if (phase?.kind === 'processing') return item.fraction ? `${phase.message}  ${Math.round(item.fraction * 100)}%` : phase.message;
+    return [item.fraction != null ? `${Math.round(item.fraction * 100)}%` : null, speed(item.speed), eta(item.eta)].filter(Boolean).join('  ·  ') || 'Downloading';
   });
-
-  let finishedText = $derived(
-    [item.job.detail, bytes(item.fileSize), item.files.length && !item.filesExist ? 'moved or deleted' : null].filter(Boolean).join(' · '),
-  );
-
-  let barFraction = $derived(item.phase?.kind === 'downloading' || item.phase?.kind === 'processing' ? item.fraction : item.phase?.kind === 'preparing' ? null : item.fraction);
 
   function menu(event: MouseEvent) {
     event.preventDefault();
@@ -61,96 +48,47 @@
       entries.push({ label: 'Cancel', action: () => api.cancelDownload(item.id) });
     } else {
       entries.push({ label: finished ? 'Download Again' : 'Try Again', action: () => api.retryDownload(item.id) });
-      entries.push({ label: 'Remove from List', action: () => api.removeDownload(item.id) });
+      entries.push({ label: 'Remove', action: () => api.removeDownload(item.id) });
     }
     popupMenu(entries);
   }
 </script>
 
-<div
-  class="row"
-  role="listitem"
-  oncontextmenu={menu}
-  ondblclick={() => finished && item.filesExist && api.open(item.id)}
->
-  <div class="art">
-    <Thumb src={item.job.thumbnail} width={square ? 46 : 64} height={square ? 46 : 40} radius={8} />
-    <span class="badge"><PlatformBadge platform={item.job.platform} size={15} /></span>
-  </div>
+<div class="row" class:dim={item.state === 'cancelled'} role="listitem" oncontextmenu={menu} ondblclick={() => finished && item.filesExist && api.open(item.id)}>
+  <Thumb src={item.job.thumbnail} width={square ? 34 : 60} height={34} />
   <div class="body">
     <div class="title truncate">{item.job.title}</div>
-    {#if item.state === 'queued'}
-      <div class="status"><Clock size={11} strokeWidth={2.2} /> Waiting to start…</div>
-    {:else if item.state === 'running'}
-      <div class="status tabular truncate">{running}</div>
-      <div class="bar"><ProgressBar fraction={barFraction} height={4} /></div>
-    {:else if item.state === 'finished'}
-      <div class="status">
-        <span class="ok"><CircleCheck size={12} strokeWidth={2.4} /></span>
-        <span class="truncate">{finishedText}</span>
-      </div>
-    {:else if item.state === 'failed'}
-      <div class="status failed" title={item.hint ?? item.error ?? ''}>
-        <span class="warn"><CircleAlert size={12} strokeWidth={2.4} /></span>
-        <span class="clamp">{item.error}</span>
-      </div>
-    {:else}
-      <div class="status"><CircleX size={11} strokeWidth={2.2} /> Cancelled</div>
-    {/if}
+    <div class="status mono truncate" title={item.state === 'failed' ? (item.hint ?? item.error ?? '') : ''}>{status}</div>
   </div>
   <div class="actions">
     {#if active}
-      <button class="icon-button" title="Cancel" aria-label="Cancel" onclick={() => api.cancelDownload(item.id)}>
-        <X size={14} strokeWidth={2.4} />
-      </button>
+      <button class="icon-button" title="Cancel" aria-label="Cancel" onclick={() => api.cancelDownload(item.id)}><X size={14} strokeWidth={1.5} /></button>
     {:else if finished}
-      <button class="icon-button" title={multiple ? 'Open folder' : 'Open'} aria-label="Open" disabled={!item.filesExist} onclick={() => api.open(item.id)}>
-        {#if multiple}<Folder size={14} strokeWidth={2.2} />{:else}<Play size={13} strokeWidth={0} fill="currentColor" />{/if}
+      <button class="icon-button" title="Open" aria-label="Open" disabled={!item.filesExist} onclick={() => api.open(item.id)}>
+        {#if multiple}<Folder size={14} strokeWidth={1.5} />{:else}<Play size={13} strokeWidth={1.5} />{/if}
       </button>
-      <button class="icon-button" title="Show in Finder" aria-label="Show in Finder" disabled={!item.filesExist} onclick={() => api.reveal(item.id)}>
-        <Search size={14} strokeWidth={2.4} />
-      </button>
+      <button class="icon-button" title="Show in Finder" aria-label="Show in Finder" disabled={!item.filesExist} onclick={() => api.reveal(item.id)}><Search size={14} strokeWidth={1.5} /></button>
     {:else}
-      <button class="icon-button" title="Try again" aria-label="Try again" onclick={() => api.retryDownload(item.id)}>
-        <RotateCw size={14} strokeWidth={2.4} />
-      </button>
-      <button class="icon-button" title="Remove" aria-label="Remove" onclick={() => api.removeDownload(item.id)}>
-        <Trash2 size={14} strokeWidth={2.2} />
-      </button>
+      <button class="icon-button" title="Try again" aria-label="Try again" onclick={() => api.retryDownload(item.id)}><RotateCw size={13} strokeWidth={1.5} /></button>
+      <button class="icon-button" title="Remove" aria-label="Remove" onclick={() => api.removeDownload(item.id)}><X size={14} strokeWidth={1.5} /></button>
     {/if}
   </div>
+  {#if item.state === 'running'}
+    <div class="progress"><ProgressBar fraction={item.phase?.kind === 'preparing' ? null : item.fraction} height={1} /></div>
+  {/if}
 </div>
 
 <style>
   .row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 9px 10px;
-    border-radius: 12px;
-    transition: background 0.15s ease;
-  }
-
-  .row:hover {
-    background: var(--fill);
-  }
-
-  .art {
     position: relative;
-    width: 64px;
-    height: 46px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    gap: 14px;
+    padding: 12px 0;
   }
 
-  .badge {
-    position: absolute;
-    right: -3px;
-    bottom: -2px;
-    display: flex;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  .row.dim {
+    opacity: 0.5;
   }
 
   .body {
@@ -162,47 +100,31 @@
   }
 
   .title {
-    font-size: 13.5px;
-    font-weight: 500;
-    letter-spacing: -0.005em;
+    font-size: 13px;
+    filter: grayscale(1);
   }
 
   .status {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--text-2);
-    min-width: 0;
-  }
-
-  .ok {
-    display: flex;
-    color: var(--green);
-    flex-shrink: 0;
-  }
-
-  .warn {
-    display: flex;
-    color: var(--orange);
-    flex-shrink: 0;
-  }
-
-  .clamp {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .bar {
-    padding-top: 2px;
   }
 
   .actions {
     display: flex;
-    gap: 2px;
     flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .row:hover .actions,
+  .actions:focus-within {
+    opacity: 1;
+  }
+
+  .progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
   }
 </style>

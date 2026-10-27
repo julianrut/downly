@@ -1,13 +1,13 @@
 <script lang="ts" generics="T">
   import type { Snippet } from 'svelte';
-  import SelectionMark from './SelectionMark.svelte';
+  import Mark from './Mark.svelte';
 
   let {
     items,
     key,
     selected = $bindable(),
     row,
-    maxHeight = 280,
+    maxHeight = 300,
   }: {
     items: T[];
     key: (item: T) => string;
@@ -32,16 +32,14 @@
 
 <div class="list">
   <div class="list-header">
-    <span class="count">
-      {all ? `All ${items.length} selected` : `${selected.size} of ${items.length} selected`}
-    </span>
-    <button class="link-button" onclick={toggleAll}>{all ? 'Select None' : 'Select All'}</button>
+    <span class="label">{selected.size}/{items.length}</span>
+    <button class="text-button" onclick={toggleAll}>{all ? 'None' : 'All'}</button>
   </div>
   <div class="rows" style:max-height="{maxHeight}px">
     {#each items as item, index (key(item))}
       {@const id = key(item)}
-      <button class="row" role="checkbox" aria-checked={selected.has(id)} onclick={() => toggle(id)}>
-        <SelectionMark selected={selected.has(id)} size={17} />
+      <button class="row" class:off={!selected.has(id)} role="checkbox" aria-checked={selected.has(id)} onclick={() => toggle(id)}>
+        <Mark on={selected.has(id)} />
         {@render row(item, index)}
       </button>
     {/each}
@@ -49,42 +47,34 @@
 </div>
 
 <style>
-  .list {
-    padding: 8px 0;
-    border-radius: 12px;
-    background: var(--fill);
-  }
-
   .list-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 10px 6px 12px;
-  }
-
-  .count {
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--text-2);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
   }
 
   .rows {
     overflow-y: auto;
-    padding: 0 4px;
   }
 
   .row {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 8px;
-    border-radius: 8px;
+    gap: 14px;
+    padding: 9px 0;
     text-align: left;
-    transition: background 0.12s ease;
+    border-bottom: 1px solid var(--line);
+    transition: opacity 0.15s ease;
+  }
+
+  .row.off {
+    opacity: 0.42;
   }
 
   .row:hover {
-    background: var(--fill);
+    opacity: 1;
   }
 </style>
