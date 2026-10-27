@@ -97,7 +97,7 @@ Tests:
 
 ```sh
 cargo test --lib --manifest-path src-tauri/Cargo.toml          # unit tests
-cargo run --release --bin downly-selftest --manifest-path src-tauri/Cargo.toml -- --downloads   # checks every service against real links
+cargo run --release --example selftest --manifest-path src-tauri/Cargo.toml -- --downloads   # checks every service against real links
 ```
 
 To work on the interface in a normal browser, run `npm run dev` and open `http://localhost:1420/?demo=video`. Without Tauri, the UI uses sample data (`demo=home`, `video`, `spotify`, `gallery`, `profile`, `tiktok`, `playlist`, `downloads`, `setup`, `error`, or `window=settings&tab=formats`).
@@ -110,7 +110,7 @@ src/settings/             the Settings window
 src-tauri/src/engine/     the engine: link parsing, yt-dlp, Spotify, YouTube Music matching,
                           Instagram, TikTok, FFmpeg tagging and conversion, component installer
 src-tauri/src/            the app shell: commands, download queue, menus, thumbnails
-src-tauri/src/bin/        end-to-end self-test run in CI against real sites
+src-tauri/examples/        end-to-end self-test run in CI against real sites
 design/                   icon source (SVG) and renders
 ```
 

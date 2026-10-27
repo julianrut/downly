@@ -88,6 +88,7 @@ jobs:
           APP="src-tauri/target/$TARGET/release/bundle/macos/Downly.app"
           codesign --force --deep --sign - "$APP"
           codesign --verify --verbose "$APP"
+          ls -la "$APP/Contents/MacOS/"
           lipo -info "$APP/Contents/MacOS/"*
           /usr/libexec/PlistBuddy -c "Print CFBundleURLTypes" "$APP/Contents/Info.plist" || true
           rm -rf dist-mac && mkdir -p dist-mac/dmg
@@ -98,13 +99,13 @@ jobs:
           du -sh "$APP" dist-mac/Downly.dmg
 
       - name: Build self-test
-        run: cargo build --release --target aarch64-apple-darwin --bin downly-selftest --manifest-path src-tauri/Cargo.toml
+        run: cargo build --release --target aarch64-apple-darwin --example selftest --manifest-path src-tauri/Cargo.toml
 
       - name: Self-test
         timeout-minutes: 20
         run: |
           set -o pipefail
-          src-tauri/target/aarch64-apple-darwin/release/downly-selftest --downloads 2>&1 | tee selftest.log
+          src-tauri/target/aarch64-apple-darwin/release/examples/selftest --downloads 2>&1 | tee selftest.log
 
       - name: Launch smoke test
         timeout-minutes: 3
