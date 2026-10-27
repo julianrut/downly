@@ -1,12 +1,12 @@
-## Downly 2.0
+## Downly 2.1
 
-Downly is rebuilt from the ground up with a Rust engine and a new interface, still designed to look and feel at home on your Mac.
+A new look: flat, black and white, and stripped down to what you need.
 
-- **Everything from 1.0.** YouTube in every quality up to 8K (always with sound), Spotify songs, albums and playlists matched on YouTube Music with Spotify's cover art and tags, Instagram posts, reels, stories, highlights and profile pictures, and TikTok videos without the watermark.
-- **Feels native.** Translucent window with the traffic lights built into the toolbar, native menus and right-click menus, a Settings window with toolbar tabs, dark mode, a Dock badge while downloads run, and notifications when they finish in the background.
-- **Runs on more Macs.** Now supports macOS 12 Monterey and later, on Apple Silicon and Intel.
-- Copy a link anywhere and Downly offers it when you switch back, drag a link onto the window, or use the `downly://` bookmarklet from your browser.
-- The download engine updates itself, so downloads keep working when sites change.
+- **One input.** The window opens to a single line: paste a link and go.
+- **Pick quality at a glance.** Resolutions and formats are shown as large numbers and names; choose one and download.
+- **Less noise.** No gradients, glows or explanatory text. Thumbnails stay grayscale until you hover them.
+- **New icon** to match.
+- Everything else is unchanged: YouTube up to 8K with sound, Spotify songs, albums and playlists, Instagram posts, reels, stories and profile pictures, and TikTok without the watermark.
 
 ### Installing
 
@@ -15,4 +15,4 @@ Downly is rebuilt from the ground up with a Rust engine and a new interface, sti
    `xattr -dr com.apple.quarantine /Applications/Downly.app`
 3. On first launch Downly downloads its components (yt-dlp, FFmpeg and Deno). This happens once and takes about a minute.
 
-Your settings and download history from Downly 1.0 aren't carried over.
+Requires macOS 12 Monterey or later. Runs natively on Apple Silicon and Intel.

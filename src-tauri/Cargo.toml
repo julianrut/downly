@@ -1,6 +1,6 @@
 [package]
 name = "downly"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 rust-version = "1.80"
 default-run = "downly"
@@ -21,7 +21,7 @@ path = "examples/selftest.rs"
 tauri-build = { version = "2.7", features = [] }
 
 [dependencies]
-tauri = { version = "2.12", features = ["macos-private-api"] }
+tauri = { version = "2.12", features = [] }
 tauri-plugin-dialog = "2.8"
 tauri-plugin-notification = "2.7"
 tauri-plugin-clipboard-manager = "2.5"

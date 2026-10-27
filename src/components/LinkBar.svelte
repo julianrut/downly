@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, ClipboardPaste, Link, CircleX } from '@lucide/svelte';
-  import { fade, scale } from 'svelte/transition';
+  import { ArrowRight, X } from '@lucide/svelte';
   import PlatformBadge from './PlatformBadge.svelte';
   import { api } from '../lib/api';
   import { app } from '../lib/state.svelte';
@@ -33,10 +32,14 @@
     };
   });
 
+  $effect(() => {
+    previous = app.input;
+  });
+
   function oninput() {
     const text = app.input;
-    const grew = text.length - previous.length;
     const wasEmpty = previous.trim() === '';
+    const grew = text.length - previous.length;
     previous = text;
     if (wasEmpty && grew > 10 && /https?:\/\/|www\.|\.(com|be)\//i.test(text)) {
       app.submit(text);
@@ -52,31 +55,17 @@
       } else {
         app.submit();
       }
-    } else if (event.key === 'Escape') {
-      if (app.input) {
-        event.preventDefault();
-        app.clear();
-      }
+    } else if (event.key === 'Escape' && app.input) {
+      event.preventDefault();
+      app.clear();
     }
   }
-
-  $effect(() => {
-    previous = app.input;
-  });
 </script>
 
-<div class="bar" class:focused>
-  <div class="leading">
-    {#key detected}
-      <span class="glyph" in:scale={{ start: 0.6, duration: 260 }}>
-        {#if detected}
-          <PlatformBadge platform={detected} size={22} />
-        {:else}
-          <Link size={17} strokeWidth={2.3} />
-        {/if}
-      </span>
-    {/key}
-  </div>
+<div class="bar" class:focused class:filled={Boolean(app.input)}>
+  {#if detected}
+    <span class="platform"><PlatformBadge platform={detected} size={16} /></span>
+  {/if}
   <input
     bind:this={field}
     bind:value={app.input}
@@ -88,145 +77,63 @@
     spellcheck="false"
     autocomplete="off"
     autocapitalize="off"
-    placeholder="Paste a link from YouTube, Spotify, Instagram or TikTok"
+    placeholder="Paste a link"
     aria-label="Link"
   />
-  {#if app.input}
-    <button class="clear" title="Clear" aria-label="Clear" onclick={() => app.clear()} transition:fade={{ duration: 120 }}>
-      <CircleX size={16} strokeWidth={2} />
+  {#if busy}
+    <span class="spinner"></span>
+  {:else if app.input}
+    <button class="icon-button" title="Clear" aria-label="Clear" onclick={() => app.clear()}>
+      <X size={15} strokeWidth={1.5} />
     </button>
+    <button class="icon-button go" title="Go" aria-label="Go" onclick={() => app.submit()}>
+      <ArrowRight size={17} strokeWidth={1.5} />
+    </button>
+  {:else}
+    <button class="text-button" onclick={() => app.pasteLink()}>Paste</button>
   {/if}
-  <div class="trailing">
-    {#if !app.input}
-      <button class="soft-button" title="Paste link (⇧⌘V)" onclick={() => app.pasteLink()} in:fade={{ duration: 150 }}>
-        <ClipboardPaste size={14} strokeWidth={2.2} />
-        Paste
-      </button>
-    {:else if busy}
-      <span class="busy" in:fade={{ duration: 150 }}><span class="spinner" style:--spinner="18px"></span></span>
-    {:else}
-      <button class="go" title="Go" aria-label="Go" onclick={() => app.submit()} in:scale={{ start: 0.7, duration: 220 }}>
-        <ArrowRight size={17} strokeWidth={2.8} />
-      </button>
-    {/if}
-  </div>
 </div>
 
 <style>
   .bar {
-    position: relative;
     display: flex;
     align-items: center;
-    gap: 12px;
-    height: 58px;
-    padding: 0 10px 0 16px;
-    border-radius: 17px;
-    background: var(--card);
-    box-shadow:
-      0 8px 24px -10px color-mix(in srgb, var(--violet) 30%, transparent),
-      inset 0 0 0 1px var(--hairline);
-    transition: box-shadow 0.25s ease;
-  }
-
-  .bar::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1.5px;
-    background: var(--brand);
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
+    gap: 10px;
+    height: 52px;
+    border-bottom: 1px solid var(--line-strong);
+    transition: border-color 0.2s ease;
   }
 
   .bar.focused {
-    box-shadow: 0 12px 34px -12px color-mix(in srgb, var(--violet) 55%, transparent);
+    border-bottom-color: var(--text);
   }
 
-  .bar.focused::before {
-    opacity: 1;
-  }
-
-  .leading {
-    width: 26px;
-    height: 26px;
-    display: grid;
-    place-items: center;
-    color: var(--text-2);
-    flex-shrink: 0;
-  }
-
-  .glyph {
-    grid-area: 1 / 1;
+  .platform {
     display: flex;
+    color: var(--text);
+    animation: rise 0.3s var(--ease);
   }
 
   input {
     flex: 1;
     min-width: 0;
     height: 100%;
+    padding: 0;
     border: none;
     outline: none;
     background: transparent;
-    font-size: 15.5px;
-    letter-spacing: -0.01em;
-    caret-color: var(--accent);
+    font-size: 19px;
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    caret-color: var(--text);
   }
 
   input::placeholder {
     color: var(--text-3);
   }
 
-  .clear {
-    display: flex;
-    color: var(--text-3);
-    transition: color 0.15s ease;
-  }
-
-  .clear:hover {
-    color: var(--text-2);
-  }
-
-  .trailing {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 34px;
-  }
-
-  .busy {
-    width: 34px;
-    height: 34px;
-    display: grid;
-    place-items: center;
-  }
-
   .go {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    color: #fff;
-    background: var(--brand);
-    box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--violet) 80%, transparent);
-    transition: transform 0.2s var(--ease-spring);
-  }
-
-  .go:hover {
-    transform: scale(1.06);
-  }
-
-  .go:active {
-    transform: scale(0.94);
+    color: var(--text);
+    margin-right: -6px;
   }
 </style>

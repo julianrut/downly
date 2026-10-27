@@ -27,7 +27,7 @@ Other details:
 - **Plays on any Mac.** YouTube only offers 1440p, 4K and 8K as VP9 or AV1, which QuickTime can't always play. Downly can convert those to HEVC with your Mac's hardware encoder, so they open in QuickTime and Photos.
 - **Audio as MP3 (320 kbps), M4A (original AAC), Opus, FLAC or WAV**, with cover art and tags.
 - **Fast and neat.** Up to 6 downloads at once, parallel fragment downloads, and real progress, speed and time left. Partial files stay out of your Downloads folder.
-- **Works the Mac way.** Copy a link anywhere and Downly offers it when you switch back. You can also drag a link onto the window. Translucent window, native menus and right-click menus, dark mode, a Dock badge while downloads run, and a notification when they finish in the background.
+- **Quiet by design.** A flat, black-and-white interface with nothing on screen you don't need. Copy a link anywhere and Downly offers it when you switch back, or drag a link onto the window. Native menus and right-click menus, dark mode, a Dock badge while downloads run, and a notification when they finish in the background.
 - **Keeps itself working.** Sites change often, so Downly checks for a new download engine once a day.
 
 ## Screenshots

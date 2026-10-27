@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
   import ClipboardPill from './components/ClipboardPill.svelte';
   import Downloads from './components/Downloads.svelte';
   import DropOverlay from './components/DropOverlay.svelte';
-  import Hero from './components/Hero.svelte';
   import LinkBar from './components/LinkBar.svelte';
   import Setup from './components/Setup.svelte';
   import TopBar from './components/TopBar.svelte';
@@ -20,6 +19,8 @@
   let scrolled = $state(false);
   let dragDepth = 0;
 
+  let empty = $derived(app.analysis.status === 'idle' && app.downloads.length === 0);
+
   onMount(() => {
     app.init().then(applyDemo);
   });
@@ -27,12 +28,16 @@
   async function applyDemo() {
     if (isTauri) return;
     const mock = await import('./lib/mock');
-    const params = new URLSearchParams(location.search);
-    const demo = params.get('demo');
+    const demo = new URLSearchParams(location.search).get('demo');
     const initial = mock.initialAnalysis();
     if (initial) {
       app.input = initial.url;
-      app.analysis = { status: 'loaded', link: { url: initial.url, platform: initial.analysis.summary.platform, kind: { type: 'generic' }, playlistId: null, isMusic: false }, analysis: initial.analysis, key: 1 };
+      app.analysis = {
+        status: 'loaded',
+        link: { url: initial.url, platform: initial.analysis.summary.platform, kind: { type: 'generic' }, playlistId: null, isMusic: false },
+        analysis: initial.analysis,
+        key: 1,
+      };
     } else if (demo === 'error') {
       app.input = 'https://www.instagram.com/stories/private.account/fail';
       app.submit(app.input);
@@ -46,7 +51,7 @@
 
   function onkeydown(event: KeyboardEvent) {
     const target = event.target as HTMLElement | null;
-    const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.tagName === 'SELECT';
+    const typing = target?.tagName === 'INPUT' || target?.tagName === 'SELECT';
     if (event.key === 'Escape' && app.analysis.status !== 'idle') {
       app.clear();
     } else if (event.key === 'Enter' && !typing && target?.tagName !== 'BUTTON') {
@@ -96,45 +101,34 @@
 <svelte:window {onkeydown} {ondragenter} {ondragleave} {ondragover} {ondrop} />
 
 <div class="window">
-  <div class="glow" aria-hidden="true"></div>
   <TopBar {scrolled} />
   {#if !app.booted}
-    <div class="center"><span class="spinner"></span></div>
+    <div class="center"></div>
   {:else if !app.setup.ready}
-    <div class="setup" in:fade={{ duration: 250 }}><Setup /></div>
+    <div class="center" in:fade={{ duration: 200 }}><Setup /></div>
   {:else}
-    <main class="scroll" onscroll={(e) => (scrolled = (e.currentTarget as HTMLElement).scrollTop > 2)} in:fade={{ duration: 300 }}>
-      <div class="content">
+    <main class="scroll" onscroll={(e) => (scrolled = (e.currentTarget as HTMLElement).scrollTop > 2)}>
+      <div class="content" class:empty>
         <LinkBar />
         {#if app.clipboard && app.analysis.status === 'idle'}
-          <div transition:fly={{ y: -8, duration: 260 }}><ClipboardPill link={app.clipboard} /></div>
+          <div transition:fade={{ duration: 150 }}><ClipboardPill link={app.clipboard} /></div>
         {/if}
 
-        {#if app.analysis.status === 'idle'}
-          {#if app.downloads.length === 0}
-            <div in:fade={{ duration: 300 }}><Hero /></div>
-          {/if}
-        {:else if app.analysis.status === 'loading'}
-          <div in:fly={{ y: -10, duration: 320 }}>
-            <LoadingCard link={app.analysis.link} preview={app.analysis.preview} />
-          </div>
+        {#if app.analysis.status === 'loading'}
+          <LoadingCard link={app.analysis.link} preview={app.analysis.preview} />
         {:else if app.analysis.status === 'failed'}
-          <div in:fade={{ duration: 200 }}>
-            <ErrorCard link={app.analysis.link} error={app.analysis.error} />
-          </div>
-        {:else}
+          <ErrorCard link={app.analysis.link} error={app.analysis.error} />
+        {:else if app.analysis.status === 'loaded'}
           {#key app.analysis.key}
-            <div class="appear">
-              {#if app.analysis.analysis.type === 'video'}
-                <VideoCard video={app.analysis.analysis} />
-              {:else if app.analysis.analysis.type === 'playlist'}
-                <PlaylistCard playlist={app.analysis.analysis} link={app.analysis.link} />
-              {:else if app.analysis.analysis.type === 'music'}
-                <MusicCard music={app.analysis.analysis} />
-              {:else}
-                <GalleryCard gallery={app.analysis.analysis} />
-              {/if}
-            </div>
+            {#if app.analysis.analysis.type === 'video'}
+              <VideoCard video={app.analysis.analysis} />
+            {:else if app.analysis.analysis.type === 'playlist'}
+              <PlaylistCard playlist={app.analysis.analysis} link={app.analysis.link} />
+            {:else if app.analysis.analysis.type === 'music'}
+              <MusicCard music={app.analysis.analysis} />
+            {:else}
+              <GalleryCard gallery={app.analysis.analysis} />
+            {/if}
           {/key}
         {/if}
 
@@ -153,32 +147,14 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: var(--window);
-    overflow: hidden;
-  }
-
-  .glow {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 380px;
-    pointer-events: none;
-    background:
-      radial-gradient(45% 180px at 22% 0, var(--glow-a), transparent 72%),
-      radial-gradient(42% 170px at 80% 0, var(--glow-b), transparent 72%),
-      radial-gradient(35% 150px at 50% 0, var(--glow-c), transparent 72%);
+    background: var(--bg);
   }
 
   .center {
     flex: 1;
-    display: grid;
-    place-items: center;
-  }
-
-  .setup {
-    flex: 1;
     display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .scroll {
@@ -190,28 +166,16 @@
   }
 
   .content {
-    position: relative;
-    max-width: 780px;
+    max-width: 640px;
     margin: 0 auto;
-    padding: 6px 28px 28px;
+    padding: 4px 36px 36px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 26px;
+    transition: padding-top 0.45s var(--ease);
   }
 
-  .appear {
-    animation: appear 0.42s var(--ease-out);
-    transform-origin: top center;
-  }
-
-  @keyframes appear {
-    from {
-      opacity: 0;
-      transform: scale(0.985) translateY(-4px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
+  .content.empty {
+    padding-top: calc(50vh - 92px);
   }
 </style>

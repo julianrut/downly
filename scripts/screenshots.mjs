@@ -15,8 +15,8 @@ const shots = [
   ['07-instagram-dark', 'demo=gallery', 'dark'],
   ['08-video-dark', 'demo=video', 'dark'],
   ['09-error', 'demo=error', 'light'],
-  ['10-settings-formats', 'window=settings&tab=formats', 'light', 600, 640],
-  ['11-settings-accounts', 'window=settings&tab=accounts', 'dark', 600, 520],
+  ['10-settings-formats', 'window=settings&tab=formats', 'light', 520, 560],
+  ['11-settings-accounts', 'window=settings&tab=accounts', 'dark', 520, 330],
   ['12-tiktok', 'demo=tiktok', 'light'],
   ['13-profile-dark', 'demo=profile', 'dark'],
 ];
@@ -38,7 +38,7 @@ try {
   await waitForServer();
   await mkdir(out, { recursive: true });
   const browser = await chromium.launch();
-  for (const [name, query, scheme, width = 820, height = 780] of shots) {
+  for (const [name, query, scheme, width = 760, height = 700] of shots) {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2, colorScheme: scheme });
     page.on('pageerror', (error) => console.error(name, error.message));
     await page.goto(`http://localhost:${port}/?${query}`);

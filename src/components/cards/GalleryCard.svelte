@@ -1,14 +1,12 @@
 <script lang="ts">
-  import { AudioWaveform, Play, Sparkles } from '@lucide/svelte';
-  import CardFooter from '../CardFooter.svelte';
-  import Footnote from '../Footnote.svelte';
+  import { untrack } from 'svelte';
+  import { AudioLines } from '@lucide/svelte';
+  import DownloadBar from '../DownloadBar.svelte';
+  import Mark from '../Mark.svelte';
   import MediaHeader from '../MediaHeader.svelte';
-  import SelectionMark from '../SelectionMark.svelte';
   import Thumb from '../Thumb.svelte';
-  import { platformNames } from '../../lib/format';
   import { describeItems, galleryJob } from '../../lib/jobs';
   import { app } from '../../lib/state.svelte';
-  import { untrack } from 'svelte';
   import type { Analysis, GalleryItem } from '../../lib/types';
 
   let { gallery }: { gallery: Extract<Analysis, { type: 'gallery' }> } = $props();
@@ -16,16 +14,6 @@
   let all = $derived(gallery.sections.flatMap((s) => s.items));
   let selected = $state(untrack(() => new Set(gallery.sections.flatMap((s) => s.items.map((i) => i.id)))));
   let chosen = $derived(all.filter((i) => selected.has(i.id)));
-  let single = $derived(all.length === 1);
-
-  let title = $derived.by(() => {
-    if (chosen.length === 1) {
-      const item = chosen[0];
-      if (gallery.isProfile && item.id.startsWith('pfp')) return 'Download profile picture';
-      return item.kind === 'photo' ? 'Download photo' : item.kind === 'video' ? 'Download video' : 'Download sound';
-    }
-    return `Download ${chosen.length} items`;
-  });
 
   function toggle(id: string) {
     const next = new Set(selected);
@@ -43,164 +31,103 @@
     }
     selected = next;
   }
-
-  function resolution(item: GalleryItem) {
-    return item.width && item.height ? `${item.width} × ${item.height}` : '';
-  }
-
-  function download() {
-    if (chosen.length) app.enqueue([galleryJob(gallery, chosen)]);
-  }
 </script>
 
-<div class="card stack">
-  <MediaHeader summary={gallery.summary} badge={gallery.isProfile ? 'Profile' : describeItems(all)} shape={gallery.isProfile ? 'circle' : 'square'} />
+<div class="panel">
+  <MediaHeader summary={gallery.summary} extra={gallery.isProfile ? null : describeItems(all)} shape={gallery.isProfile ? 'circle' : 'square'} />
 
   {#each gallery.sections as section (section.id)}
-    <section class="section">
+    <section>
       <div class="section-header">
-        <h3>{section.title}</h3>
+        <span class="label">{gallery.sections.length > 1 ? section.title : `${section.items.filter((i) => selected.has(i.id)).length}/${section.items.length}`}</span>
         {#if section.items.length > 1}
-          <button class="link-button" onclick={() => toggleSection(section.items)}>
-            {section.items.every((i) => selected.has(i.id)) ? 'Select None' : 'Select All'}
+          <button class="text-button" onclick={() => toggleSection(section.items)}>
+            {section.items.every((i) => selected.has(i.id)) ? 'None' : 'All'}
           </button>
         {/if}
       </div>
-      <div class="tiles" class:single>
+      <div class="tiles">
         {#each section.items as item (item.id)}
           {@const on = selected.has(item.id)}
-          <button class="tile" class:on role="checkbox" aria-checked={on} title={resolution(item)} onclick={() => toggle(item.id)}>
+          <button class="tile" class:on role="checkbox" aria-checked={on} onclick={() => toggle(item.id)}>
             {#if item.kind === 'audio'}
-              <div class="audio"><AudioWaveform size={30} strokeWidth={2.2} /></div>
+              <div class="audio"><AudioLines size={22} strokeWidth={1.4} /></div>
             {:else}
-              <Thumb src={item.thumbnail ?? (item.kind === 'photo' ? item.url : null)} width="100%" height="100%" radius={12} />
+              <Thumb src={item.thumbnail ?? (item.kind === 'photo' ? item.url : null)} width="100%" height="100%" />
             {/if}
-            {#if item.kind === 'video'}
-              <span class="play"><Play size={10} strokeWidth={0} fill="#fff" /></span>
-            {/if}
-            <span class="mark"><SelectionMark selected={on} overlay /></span>
+            {#if item.kind === 'video'}<span class="kind mono">VID</span>{/if}
+            <span class="mark"><Mark {on} light size={12} /></span>
           </button>
         {/each}
       </div>
     </section>
   {/each}
 
-  <CardFooter {title} enabled={chosen.length > 0} ondownload={download}>
-    <Footnote icon={Sparkles} text="Original resolution, straight from {platformNames[gallery.summary.platform]}" />
-  </CardFooter>
+  <DownloadBar
+    title={chosen.length > 1 ? `Download ${chosen.length}` : 'Download'}
+    enabled={chosen.length > 0}
+    ondownload={() => chosen.length && app.enqueue([galleryJob(gallery, chosen)])}
+  />
 </div>
 
 <style>
-  .stack {
+  section {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-  }
-
-  .section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
 
   .section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
   }
 
   .tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-    gap: 10px;
-  }
-
-  .tiles.single {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 260px));
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 6px;
   }
 
   .tile {
     position: relative;
     aspect-ratio: 1;
-    border-radius: 12px;
-    opacity: 0.6;
-    transition:
-      transform 0.3s var(--ease-spring),
-      opacity 0.18s ease;
+    border-radius: 2px;
+    overflow: hidden;
+    opacity: 0.38;
+    transition: opacity 0.15s ease;
   }
 
-  .tile.on {
-    opacity: 1;
-  }
-
+  .tile.on,
   .tile:hover {
-    transform: scale(1.025);
-  }
-
-  .tile:active {
-    transform: scale(0.98);
-  }
-
-  .tile::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 0 0 1px var(--hairline);
-    pointer-events: none;
-  }
-
-  .tile.on::after {
-    padding: 2px;
-    box-shadow: none;
-    background: var(--brand);
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    opacity: 1;
   }
 
   .audio {
     width: 100%;
     height: 100%;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    background: var(--brand);
+    display: grid;
+    place-items: center;
+    color: var(--text-2);
+    background: var(--fill);
   }
 
-  .play {
+  .kind {
     position: absolute;
-    left: 7px;
-    bottom: 7px;
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-left: 2px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    left: 6px;
+    bottom: 5px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #fff;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
   }
 
   .mark {
     position: absolute;
-    top: 7px;
-    right: 7px;
+    top: 6px;
+    right: 6px;
     display: flex;
   }
 </style>
