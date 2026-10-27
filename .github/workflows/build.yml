@@ -27,30 +27,42 @@ permissions:
 jobs:
   mac:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
       DOWNLY_TOOLS_DIR: ${{ github.workspace }}/.tools-cache
+      UNIVERSAL: ${{ (github.event_name == 'workflow_dispatch' && inputs.universal) && '1' || '' }}
+      CARGO_TERM_COLOR: never
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Select newest Xcode
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust toolchain
         run: |
-          ls -d /Applications/Xcode*.app || true
-          XCODE=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi -E "beta|rc" | sort -V | tail -1)
-          if [ -n "$XCODE" ]; then sudo xcode-select -s "$XCODE"; fi
-          xcodebuild -version
-          swift --version
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          rustc --version
+          cargo --version
           sw_vers
 
-      - name: Restore build cache
+      - name: Restore Rust cache
         uses: actions/cache@v4
         with:
-          path: .build
-          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.swift') }}-${{ github.sha }}
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            src-tauri/target
+          key: cargo-${{ runner.arch }}-${{ env.UNIVERSAL }}-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
-            spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.swift') }}-
+            cargo-${{ runner.arch }}-${{ env.UNIVERSAL }}-${{ hashFiles('src-tauri/Cargo.lock') }}-
+            cargo-${{ runner.arch }}-${{ env.UNIVERSAL }}-
 
       - name: Restore engine cache
         uses: actions/cache@v4
@@ -60,51 +72,79 @@ jobs:
           restore-keys: |
             tools-${{ runner.arch }}-
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check frontend
+        run: npm run check
+
       - name: Unit tests
-        if: contains(github.event.head_commit.message, '[tests]')
-        run: swift test 2>&1 | tail -80; exit ${PIPESTATUS[0]}
+        run: cargo test --lib --manifest-path src-tauri/Cargo.toml
 
       - name: Build app
-        env:
-          ARCHS: ${{ (github.event_name == 'workflow_dispatch' && inputs.universal) && 'arm64 x86_64' || '' }}
         run: |
-          if [ -z "$ARCHS" ]; then unset ARCHS; fi
-          ./scripts/build-app.sh
+          if [ -n "$UNIVERSAL" ]; then TARGET=universal-apple-darwin; else TARGET=aarch64-apple-darwin; fi
+          npx tauri build --ci --target "$TARGET" --bundles app
+          APP="src-tauri/target/$TARGET/release/bundle/macos/Downly.app"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --verbose "$APP"
+          lipo -info "$APP/Contents/MacOS/"*
+          /usr/libexec/PlistBuddy -c "Print CFBundleURLTypes" "$APP/Contents/Info.plist" || true
+          rm -rf dist-mac && mkdir -p dist-mac/dmg
+          cp -R "$APP" dist-mac/dmg/
+          ln -s /Applications dist-mac/dmg/Applications
+          hdiutil create -volname Downly -srcfolder dist-mac/dmg -ov -format UDZO dist-mac/Downly.dmg
+          echo "APP_PATH=$APP" >> "$GITHUB_ENV"
+          du -sh "$APP" dist-mac/Downly.dmg
 
       - name: Build self-test
-        run: swift build -c release --product downly-selftest
+        run: cargo build --release --bin downly-selftest --manifest-path src-tauri/Cargo.toml
 
       - name: Self-test
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: |
-          BIN="$(swift build -c release --show-bin-path)"
-          "$BIN/downly-selftest" --downloads 2>&1 | tee selftest.log
+          set -o pipefail
+          src-tauri/target/release/downly-selftest --downloads 2>&1 | tee selftest.log
 
-      - name: UI snapshots
-        if: always()
-        timeout-minutes: 5
+      - name: Launch smoke test
+        timeout-minutes: 3
         run: |
-          mkdir -p snapshots
-          ./dist/Downly.app/Contents/MacOS/Downly --snapshot "$PWD/snapshots" &
+          EXE=$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$APP_PATH/Contents/Info.plist")
+          "$APP_PATH/Contents/MacOS/$EXE" > launch.log 2>&1 &
           PID=$!
-          for i in $(seq 1 120); do
-            if ! kill -0 $PID 2>/dev/null; then break; fi
-            sleep 1
-          done
-          kill $PID 2>/dev/null || true
+          sleep 15
+          if kill -0 $PID 2>/dev/null; then
+            echo "Downly is running"
+            kill $PID
+          else
+            echo "Downly exited early"
+            cat launch.log
+            exit 1
+          fi
+          cat launch.log
+
+      - name: UI screenshots
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+          node scripts/screenshots.mjs snapshots
           ls -la snapshots
 
-      - name: Commit UI snapshots
+      - name: Commit UI screenshots
         if: github.event_name == 'push' && contains(github.event.head_commit.message, '[snapshots]')
         run: |
           shopt -s nullglob
           files=(snapshots/*.png)
           if [ ${#files[@]} -eq 0 ]; then echo "no snapshots"; exit 0; fi
+          rm -f docs/screenshots/*.png
           mkdir -p docs/screenshots
           cp snapshots/*.png docs/screenshots/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/screenshots
+          git add -A docs/screenshots
           git commit -m "Update UI screenshots [skip ci]" || exit 0
           git pull --rebase origin "${GITHUB_REF_NAME}" || true
           git push origin "HEAD:${GITHUB_REF_NAME}"
@@ -113,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Downly-dmg
-          path: dist/Downly.dmg
+          path: dist-mac/Downly.dmg
           if-no-files-found: warn
 
       - name: Upload diagnostics
@@ -124,6 +164,7 @@ jobs:
           path: |
             snapshots/
             selftest.log
+            launch.log
           if-no-files-found: ignore
 
       - name: Publish release
@@ -131,7 +172,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" dist/Downly.app/Contents/Info.plist)
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
           TAG="v$VERSION"
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$TAG" dist/Downly.dmg --title "Downly $VERSION" --notes-file docs/RELEASE_NOTES.md --target "$GITHUB_SHA"
+          gh release create "$TAG" dist-mac/Downly.dmg --title "Downly $VERSION" --notes-file docs/RELEASE_NOTES.md --target "$GITHUB_SHA"

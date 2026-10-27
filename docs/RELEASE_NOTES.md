@@ -1,13 +1,11 @@
-## Downly 1.0
+## Downly 2.0
 
-Paste a link and download it on your Mac.
+Downly is rebuilt from the ground up with a Rust engine and a new interface, still designed to look and feel at home on your Mac.
 
-- **YouTube**: every quality from 144p to 8K, always with sound. Videos above 1080p can be converted to HEVC with your Mac's media engine so they play in QuickTime and Photos.
-- **Spotify**: songs, albums and playlists. Downly matches each song on YouTube Music, then adds Spotify's cover art, title, artist and album.
-- **Instagram**: posts, carousels, reels, stories, highlights and profile pictures.
-- **TikTok**: videos without the watermark, photo posts and sounds.
-- Works with 1,000+ other sites through yt-dlp.
-- Copy a link and Downly offers it when you switch back. You can also drag a link onto the window, or use the `downly://` bookmarklet from your browser.
+- **Everything from 1.0.** YouTube in every quality up to 8K (always with sound), Spotify songs, albums and playlists matched on YouTube Music with Spotify's cover art and tags, Instagram posts, reels, stories, highlights and profile pictures, and TikTok videos without the watermark.
+- **Feels native.** Translucent window with the traffic lights built into the toolbar, native menus and right-click menus, a Settings window with toolbar tabs, dark mode, a Dock badge while downloads run, and notifications when they finish in the background.
+- **Runs on more Macs.** Now supports macOS 12 Monterey and later, on Apple Silicon and Intel.
+- Copy a link anywhere and Downly offers it when you switch back, drag a link onto the window, or use the `downly://` bookmarklet from your browser.
 - The download engine updates itself, so downloads keep working when sites change.
 
 ### Installing
@@ -17,4 +15,4 @@ Paste a link and download it on your Mac.
    `xattr -dr com.apple.quarantine /Applications/Downly.app`
 3. On first launch Downly downloads its components (yt-dlp, FFmpeg and Deno). This happens once and takes about a minute.
 
-Requires macOS 14 Sonoma or later. Runs natively on Apple Silicon and Intel.
+Your settings and download history from Downly 1.0 aren't carried over.

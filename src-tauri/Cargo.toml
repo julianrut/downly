@@ -1,0 +1,50 @@
+[package]
+name = "downly"
+version = "2.0.0"
+edition = "2021"
+rust-version = "1.80"
+default-run = "downly"
+
+[lib]
+name = "downly_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "downly"
+path = "src/main.rs"
+
+[[bin]]
+name = "downly-selftest"
+path = "src/bin/selftest.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = ["macos-private-api"] }
+tauri-plugin-dialog = "2.8"
+tauri-plugin-notification = "2.7"
+tauri-plugin-clipboard-manager = "2.5"
+tauri-plugin-deep-link = "2.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "io-util", "sync", "time", "fs"] }
+tokio-util = "0.7"
+reqwest = { version = "0.12", default-features = false, features = ["default-tls", "charset", "http2", "json", "cookies", "gzip", "brotli", "stream"] }
+futures-util = "0.3"
+regex = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+base64 = "0.22"
+dirs = "6"
+libc = "0.2"
+thiserror = "2"
+url = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard"] }

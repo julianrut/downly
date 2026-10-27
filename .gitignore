@@ -1,8 +1,8 @@
 .DS_Store
-.build/
-.swiftpm/
-build/
+node_modules/
 dist/
-*.xcodeproj
-xcuserdata/
-DerivedData/
+dist-mac/
+snapshots/
+src-tauri/target/
+src-tauri/gen/schemas/
+.tools-cache/

@@ -27,7 +27,7 @@ Other details:
 - **Plays on any Mac.** YouTube only offers 1440p, 4K and 8K as VP9 or AV1, which QuickTime can't always play. Downly can convert those to HEVC with your Mac's hardware encoder, so they open in QuickTime and Photos.
 - **Audio as MP3 (320 kbps), M4A (original AAC), Opus, FLAC or WAV**, with cover art and tags.
 - **Fast and neat.** Up to 6 downloads at once, parallel fragment downloads, and real progress, speed and time left. Partial files stay out of your Downloads folder.
-- **Works the Mac way.** Copy a link anywhere and Downly offers it when you switch back. You can also drag a link onto the window, or drag a finished file from the list into another app.
+- **Works the Mac way.** Copy a link anywhere and Downly offers it when you switch back. You can also drag a link onto the window. Translucent window, native menus and right-click menus, dark mode, a Dock badge while downloads run, and a notification when they finish in the background.
 - **Keeps itself working.** Sites change often, so Downly checks for a new download engine once a day.
 
 ## Screenshots
@@ -53,7 +53,7 @@ Other details:
 
 4. On first launch Downly downloads its components (yt-dlp, FFmpeg and Deno, about 150 MB). This happens once.
 
-Requires **macOS 14 Sonoma or later**. Runs natively on Apple Silicon and Intel.
+Requires **macOS 12 Monterey or later**. Runs natively on Apple Silicon and Intel.
 
 ## One-click download from your browser
 
@@ -76,26 +76,42 @@ The same sign-in also helps when YouTube asks you to confirm you're not a bot, o
 
 ## Build from source
 
-You need Xcode 16 or later (Swift 6).
+Downly is built with [Tauri](https://tauri.app): a Rust engine with a Svelte interface that runs in the Mac's own WebKit. You don't need the Xcode app. You need:
+
+- [Node.js](https://nodejs.org) 20 or later
+- [Rust](https://rustup.rs) (stable)
+- the Xcode Command Line Tools: `xcode-select --install`
 
 ```sh
 git clone https://github.com/julianrut/downly.git
 cd downly
-./scripts/build-app.sh                 # builds dist/Downly.app and dist/Downly.dmg
-ARCHS="arm64 x86_64" ./scripts/build-app.sh   # universal build
-open dist/Downly.app
+npm install
+npm run tauri dev        # run the app with live reload
+npm run tauri build      # builds src-tauri/target/release/bundle/macos/Downly.app
+npm run tauri build -- --target universal-apple-darwin   # Apple Silicon + Intel
 ```
 
-`swift test` runs the unit tests. `swift run downly-selftest --downloads` checks every service against real links.
+Every push also builds a universal DMG on GitHub Actions, so you can download a finished app from the [Build workflow](../../actions/workflows/build.yml) without building anything yourself.
+
+Tests:
+
+```sh
+cargo test --lib --manifest-path src-tauri/Cargo.toml          # unit tests
+cargo run --release --bin downly-selftest --manifest-path src-tauri/Cargo.toml -- --downloads   # checks every service against real links
+```
+
+To work on the interface in a normal browser, run `npm run dev` and open `http://localhost:1420/?demo=video`. Without Tauri, the UI uses sample data (`demo=home`, `video`, `spotify`, `gallery`, `profile`, `tiktok`, `playlist`, `downloads`, `setup`, `error`, or `window=settings&tab=formats`).
 
 ### Project layout
 
 ```
-Sources/DownlyCore    the engine: link parsing, yt-dlp, Spotify, YouTube Music matching,
-                      Instagram, TikTok, FFmpeg tagging and conversion, component installer
-Sources/Downly        the SwiftUI app
-Sources/SelfTest      end-to-end checks run in CI against real sites
-design/               icon source (SVG) and renders
+src/                      the interface (Svelte 5 + TypeScript)
+src/settings/             the Settings window
+src-tauri/src/engine/     the engine: link parsing, yt-dlp, Spotify, YouTube Music matching,
+                          Instagram, TikTok, FFmpeg tagging and conversion, component installer
+src-tauri/src/            the app shell: commands, download queue, menus, thumbnails
+src-tauri/src/bin/        end-to-end self-test run in CI against real sites
+design/                   icon source (SVG) and renders
 ```
 
 ## How the Spotify part works
