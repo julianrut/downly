@@ -59,7 +59,18 @@ pub fn open_settings(app: &AppHandle) {
                 interactive: false,
             })
     };
-    let _ = builder.build();
+    if builder.build().is_ok() {
+        let handle = app.clone();
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(1500)).await;
+            if let Some(window) = handle.get_webview_window("settings") {
+                if !window.is_visible().unwrap_or(true) {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        });
+    }
 }
 
 pub fn open_path(path: &Path, reveal: bool) {
