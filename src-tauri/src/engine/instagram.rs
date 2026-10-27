@@ -562,7 +562,9 @@ fn area(v: &Value) -> i64 {
 
 pub fn item_from(media: &Value, fallback_id: &str, name: &str) -> Option<GalleryItem> {
     let images = json::arr(&media["image_versions2"]["candidates"]);
-    let best_image = images.iter().max_by_key(|v| area(v));
+    let best_image = images.iter().rev().max_by_key(|v| area(v));
+    let original_width = json::i(&media["original_width"]).or_else(|| json::i(&media["dimensions"]["width"]));
+    let original_height = json::i(&media["original_height"]).or_else(|| json::i(&media["dimensions"]["height"]));
     let thumbnail = images
         .iter()
         .min_by_key(|v| (json::i(&v["width"]).unwrap_or(0) - 640).abs())
@@ -570,15 +572,15 @@ pub fn item_from(media: &Value, fallback_id: &str, name: &str) -> Option<Gallery
         .or_else(|| best_image.and_then(|v| json::url(&v["url"])));
     let id = json::s(&media["pk"]).or_else(|| json::s(&media["id"])).unwrap_or_else(|| fallback_id.to_string());
     let videos = json::arr(&media["video_versions"]);
-    if let Some(best) = videos.iter().max_by_key(|v| area(v)) {
+    if let Some(best) = videos.iter().rev().max_by_key(|v| area(v)) {
         let url = json::url(&best["url"])?;
         return Some(GalleryItem {
             id,
             kind: GalleryKind::Video,
             url,
             thumbnail,
-            width: json::i(&best["width"]),
-            height: json::i(&best["height"]),
+            width: json::i(&best["width"]).or(original_width),
+            height: json::i(&best["height"]).or(original_height),
             headers: media_headers(),
             suggested_name: name.to_string(),
             ytdlp_url: None,
@@ -606,8 +608,8 @@ pub fn item_from(media: &Value, fallback_id: &str, name: &str) -> Option<Gallery
             kind: GalleryKind::Photo,
             url,
             thumbnail,
-            width: json::i(&best["width"]),
-            height: json::i(&best["height"]),
+            width: json::i(&best["width"]).or(original_width),
+            height: json::i(&best["height"]).or(original_height),
             headers: media_headers(),
             suggested_name: name.to_string(),
             ytdlp_url: None,
@@ -674,6 +676,20 @@ pub fn urlencode(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn picks_first_version_when_sizes_are_missing() {
+        let media = serde_json::json!({
+            "pk": "1",
+            "original_width": 1080,
+            "original_height": 1920,
+            "video_versions": [{"url": "https://cdn.example/best.mp4"}, {"url": "https://cdn.example/low.mp4"}],
+            "image_versions2": {"candidates": [{"url": "https://cdn.example/a.jpg", "width": 1080, "height": 1920}]}
+        });
+        let item = item_from(&media, "x", "name").unwrap();
+        assert_eq!(item.url, "https://cdn.example/best.mp4");
+        assert_eq!((item.width, item.height), (Some(1080), Some(1920)));
+    }
 
     #[test]
     fn shortcode() {

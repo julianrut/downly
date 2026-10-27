@@ -98,13 +98,13 @@ jobs:
           du -sh "$APP" dist-mac/Downly.dmg
 
       - name: Build self-test
-        run: cargo build --release --bin downly-selftest --manifest-path src-tauri/Cargo.toml
+        run: cargo build --release --target aarch64-apple-darwin --bin downly-selftest --manifest-path src-tauri/Cargo.toml
 
       - name: Self-test
         timeout-minutes: 20
         run: |
           set -o pipefail
-          src-tauri/target/release/downly-selftest --downloads 2>&1 | tee selftest.log
+          src-tauri/target/aarch64-apple-darwin/release/downly-selftest --downloads 2>&1 | tee selftest.log
 
       - name: Launch smoke test
         timeout-minutes: 3
@@ -128,7 +128,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 8
         run: |
-          npm install --no-save playwright@1.55.0
+          npm install --no-save playwright@1.59.1
           npx playwright install chromium
           node scripts/screenshots.mjs snapshots
           ls -la snapshots
